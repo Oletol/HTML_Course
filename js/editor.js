@@ -5,7 +5,10 @@
    – номера строк;
    – Tab ставит два пробела, Shift+Tab убирает отступ (и для выделенных строк);
    – Enter сохраняет отступ строки, после открывающего тега добавляет два пробела;
-   – Esc, затем Tab – выйти из редактора клавиатурой (Tab больше не ловушка).
+   – Esc, затем Tab – выйти из редактора клавиатурой (Tab больше не ловушка);
+   – подсветка строк: mark([{ line, tone }]), tone = 'err' | 'warn' | 'fix';
+     подсветка снимается при первой правке;
+   – goToLine(n) – поставить курсор в начало строки.
 
    Что запрещено (набор только вручную):
    – вставка (Cmd/Ctrl+V, меню, Shift+Insert, вставка с мобильной клавиатуры);
@@ -22,16 +25,46 @@ const BLOCKED_INPUT = new Set(['insertFromPaste', 'insertFromPasteAsQuotation',
   'insertFromDrop', 'insertFromYank', 'insertLink']);
 const INDENT = '  ';
 
-export function createEditor(textarea, gutter, { onChange, onBlocked, onSuspicious } = {}) {
+export function createEditor(textarea, gutter, marksLayer, { onChange, onBlocked, onSuspicious } = {}) {
   let escapeArmed = false;
   let internal = false; /* true, пока текст вставляет сам редактор (Tab, Enter) */
+  let marks = [];       /* [{ line, tone }] */
+
+  function metrics() {
+    const cs = getComputedStyle(textarea);
+    return { lh: parseFloat(cs.lineHeight) || 22, top: parseFloat(cs.paddingTop) || 0 };
+  }
 
   function renderGutter() {
     const lines = textarea.value.split('\n').length;
-    let out = '';
-    for (let i = 1; i <= lines; i++) out += i + '\n';
-    gutter.textContent = out;
+    const tones = new Map(marks.map(m => [m.line, m.tone]));
+    const frag = document.createDocumentFragment();
+    for (let i = 1; i <= lines; i++) {
+      const span = document.createElement('span');
+      span.textContent = i;
+      if (tones.has(i)) span.className = 'is-' + tones.get(i);
+      frag.append(span, '\n');
+    }
+    gutter.replaceChildren(frag);
     gutter.scrollTop = textarea.scrollTop;
+  }
+
+  function renderMarks() {
+    if (!marksLayer) return;
+    const { lh, top } = metrics();
+    marksLayer.replaceChildren(...marks.map(m => {
+      const d = document.createElement('div');
+      d.className = `editor__mark editor__mark--${m.tone}`;
+      d.style.top = `${top + (m.line - 1) * lh - textarea.scrollTop}px`;
+      d.style.height = `${lh}px`;
+      return d;
+    }));
+  }
+
+  function setMarks(list) {
+    marks = (list || []).filter(m => m.line >= 1);
+    renderGutter();
+    renderMarks();
   }
 
   /* Вставка текста с сохранением истории Cmd+Z, где это возможно */
@@ -136,14 +169,29 @@ export function createEditor(textarea, gutter, { onChange, onBlocked, onSuspicio
     if (!internal && (e.inputType === 'insertText' || e.inputType === 'insertReplacementText')) {
       if (e.data && e.data.length > 30) onSuspicious?.(e.data.length);
     }
+    if (marks.length) marks = [];
     renderGutter();
+    renderMarks();
     onChange?.(textarea.value);
   });
-  textarea.addEventListener('scroll', () => { gutter.scrollTop = textarea.scrollTop; });
+  textarea.addEventListener('scroll', () => { gutter.scrollTop = textarea.scrollTop; renderMarks(); });
+  window.addEventListener('resize', renderMarks);
 
   return {
     get value() { return textarea.value; },
-    set value(v) { textarea.value = v ?? ''; renderGutter(); textarea.scrollTop = 0; },
-    focus() { textarea.focus(); }
+    set value(v) { textarea.value = v ?? ''; marks = []; textarea.scrollTop = 0; renderGutter(); renderMarks(); },
+    focus() { textarea.focus(); },
+    mark: setMarks,
+    clearMarks() { setMarks([]); },
+    goToLine(n) {
+      const lines = textarea.value.split('\n');
+      const line = Math.max(1, Math.min(n, lines.length));
+      const pos = lines.slice(0, line - 1).reduce((s, l) => s + l.length + 1, 0);
+      textarea.focus();
+      textarea.setSelectionRange(pos, pos);
+      const { lh } = metrics();
+      textarea.scrollTop = Math.max(0, (line - 3) * lh);
+      renderMarks();
+    }
   };
 }

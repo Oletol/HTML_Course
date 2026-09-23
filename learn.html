@@ -48,13 +48,22 @@
         </div>
         <div class="editor">
           <pre class="editor__gutter" id="gutter" aria-hidden="true"></pre>
-          <textarea class="editor__area" id="code"
-            spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-            wrap="off" aria-describedby="kbdHint"
-            placeholder="Наберите код здесь. Вставка отключена."></textarea>
+<div class="editor__code">
+            <div class="editor__marks" id="marks" aria-hidden="true"></div>
+            <textarea class="editor__area" id="code"
+              spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+              wrap="off" aria-describedby="kbdHint"
+              placeholder="Наберите код здесь. Вставка отключена."></textarea>
+          </div>
+        </div>
+        <div class="diags" id="diags" hidden>
+          <p class="diags__title" id="diagsTitle"></p>
+          <ul class="diags__list" id="diagsList"></ul>
         </div>
         <div class="pane__actions">
             <button class="btn btn--primary" type="button" id="btnCheck">Проверить</button>
+            <button class="btn" type="button" id="btnSolution" hidden>Показать правильный код</button>
+            <button class="btn btn--quiet" type="button" id="btnRestore" hidden>Вернуть мой вариант</button>
             <button class="btn" type="button" id="btnQuiz" hidden>Пройти тест</button>
             <button class="btn" type="button" id="btnNext" hidden>Следующий шаг</button>
             <span class="pane__status" id="status" role="status" aria-live="polite"></span>

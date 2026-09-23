@@ -206,13 +206,13 @@ body {
 /* ---------- Практика ---------- */
 .practice {
   display: grid;
-  grid-template-rows: auto minmax(240px, 1.35fr) minmax(150px, 1fr);
+  grid-template-rows: auto minmax(300px, 1.8fr) minmax(140px, 1fr);
   min-height: 0;
   background: var(--fv-paper);
 }
 
 .task {
-  max-height: 34vh;
+  max-height: 28vh;
   overflow: auto;
   padding: 14px 20px 12px;
   background: var(--fv-surface);
@@ -250,7 +250,7 @@ body {
 .reqs__item[data-state="ok"] .reqs__text { color: var(--fv-ink); }
 
 /* ---------- Панели редактора и результата ---------- */
-.pane { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; }
+.pane { display: grid; grid-template-rows: auto 1fr auto auto; min-height: 0; }
 .pane__head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   min-height: 40px; padding: 4px 12px 4px 20px;
@@ -271,17 +271,30 @@ body {
   min-width: 3.2em;
   overflow: hidden;
   text-align: right;
-  color: var(--fv-ink-2); opacity: .55;
+  color: var(--fv-ink-2);
   background: var(--fv-paper);
   border-right: 1px solid var(--fv-line-soft);
   user-select: none; -webkit-user-select: none;
   font: inherit;
 }
+.editor__gutter span { opacity: .55; }
+.editor__gutter .is-err { opacity: 1; color: var(--fv-err); font-weight: 700; }
+.editor__gutter .is-warn { opacity: 1; color: var(--fv-warn); font-weight: 700; }
+.editor__gutter .is-fix { opacity: 1; color: var(--fv-ok); font-weight: 700; }
+
+.editor__code { position: relative; min-height: 0; min-width: 0; overflow: hidden; background: var(--fv-surface); }
+.editor__marks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.editor__mark { position: absolute; left: 0; right: 0; }
+.editor__mark--err { background: var(--fv-err-soft); box-shadow: inset 3px 0 0 var(--fv-err); }
+.editor__mark--warn { background: var(--fv-warn-soft); box-shadow: inset 3px 0 0 var(--fv-warn); }
+.editor__mark--fix { background: var(--fv-ok-soft); box-shadow: inset 3px 0 0 var(--fv-ok); }
+
 .editor__area {
+  position: relative;
   display: block; width: 100%; height: 100%;
   margin: 0; padding: 12px 16px;
   border: 0; outline: none; resize: none;
-  background: var(--fv-surface); color: var(--fv-ink);
+  background: transparent; color: var(--fv-ink);
   font: inherit; tab-size: 2;
   white-space: pre; overflow: auto;
   caret-color: var(--fv-electric);
@@ -295,7 +308,29 @@ body {
   background: var(--fv-surface);
   border-top: 1px solid var(--fv-line-soft);
 }
-.pane__status { font-size: 14px; }
+.pane__status { font-size: 14px; flex: 1 1 220px; }
+
+.diags {
+  max-height: 120px; overflow: auto;
+  padding: 10px 16px 8px;
+  background: var(--fv-surface);
+  border-top: 1px solid var(--fv-line-soft);
+}
+.diags__title { margin: 0 0 6px; font-weight: 700; font-size: 14px; color: var(--fv-ink); }
+.diags__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.diags__btn {
+  display: flex; gap: 10px; align-items: baseline; width: 100%;
+  min-height: 32px; padding: 5px 8px;
+  border: 0; border-radius: var(--fv-radius-sm);
+  background: transparent; color: var(--fv-ink-2);
+  font: 14px/1.45 var(--fv-font-text); text-align: left; cursor: pointer;
+}
+.diags__btn:hover { background: var(--fv-paper); color: var(--fv-ink); }
+.diags__line { flex: 0 0 auto; font: 12px var(--fv-font-mono); font-weight: 700; }
+.diags__btn[data-tone="err"] .diags__line { color: var(--fv-err); }
+.diags__btn[data-tone="warn"] .diags__line { color: var(--fv-warn); }
+.diags__btn[data-tone="fix"] .diags__line { color: var(--fv-ok); }
+.diags__btn code { white-space: pre-wrap; }
 .pane__status[data-tone="ok"] { color: var(--fv-ok); }
 .pane__status[data-tone="fail"] { color: var(--fv-err); }
 .pane__tools { display: flex; align-items: center; gap: 12px; }
@@ -434,6 +469,7 @@ a.steps__link:hover { background: var(--fv-paper); color: var(--fv-ink); }
   .practice { display: block; }
   .task { max-height: none; }
   .editor { height: 55vh; }
+  .editor__code { height: 100%; }
   .preview-pane .preview { height: 50vh; }
   .pane__kbd { display: none; }
 }

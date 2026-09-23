@@ -4,8 +4,10 @@
    Порядок работы шага:
    1. теория и задание;
    2. студент набирает код, превью обновляется само;
-   3. «Проверить» – требования отмечаются выполненными или нет;
-      после 3, 5 и 7 неудачных проверок открываются подсказки;
+   3. «Проверить» – требования отмечаются выполненными или нет,
+      строки с ошибками подсвечиваются, опечатки называются сразу;
+      после 3 и 5 неудачных проверок открываются подсказки,
+      после 7-й в редактор вставляется правильный код (см. SOLUTION_*);
    4. все требования выполнены – открывается тест;
    5. тест пройден – шаг завершён, открывается следующий.
 
@@ -17,13 +19,19 @@ import { flatSteps } from '../content/index.js';
 import { createEditor } from './editor.js';
 import { createPreview } from './preview.js';
 import { protect, guardDocument } from './protect.js';
-import { runChecks } from './validator.js';
+import { analyze, makeContext, changedLines } from './validator.js';
 import { hintLevel, attemptsToNextHint, renderHint } from './hints.js';
 import { openQuiz } from './quiz.js';
 import { createTracker } from './tracker.js';
 import { rich, paragraphs, toast, h } from './ui.js';
 
 const MAX_CODE = 20000;
+
+/* Правильный код после N неудачных проверок.
+   'auto'   – вставляется сам (свой вариант студент может вернуть кнопкой);
+   'button' – появляется кнопка «Показать правильный код». */
+const SOLUTION_AFTER = 7;
+const SOLUTION_MODE = 'auto';
 const STATUS_RANK = { in_progress: 1, practice_done: 2, completed: 3 };
 
 /* ---------- Профиль ---------- */
@@ -39,7 +47,9 @@ const els = {
   theory: $('theory'), task: $('task'), taskText: $('taskText'), reqList: $('reqList'),
   code: $('code'), gutter: $('gutter'), preview: $('preview'),
   btnCheck: $('btnCheck'), btnQuiz: $('btnQuiz'), btnNext: $('btnNext'), btnReset: $('btnReset'),
-  status: $('status'), hintBox: $('hintBox'),
+  status: $('status'), hintBox: $('hintBox'), marks: $('marks'),
+  diags: $('diags'), diagsTitle: $('diagsTitle'), diagsList: $('diagsList'),
+  btnSolution: $('btnSolution'), btnRestore: $('btnRestore'),
   stepNum: $('stepNum'), stepTitle: $('stepTitle'),
   progressText: $('progressText'), progressBar: $('progressBar'),
   userName: $('userName'),
@@ -51,7 +61,7 @@ const els = {
 /* ---------- Состояние ---------- */
 const steps = flatSteps();
 let progress = await store.loadProgress();
-let current = null; /* { index, meta, def } */
+let current = null; /* { index, meta, def, ownCode, solutionShown } */
 
 const isDone = id => progress[id]?.status === 'completed';
 const accessible = i => steps[i]?.ready && steps.slice(0, i).every(s => isDone(s.id));
@@ -66,7 +76,7 @@ const tracker = createTracker({
 const preview = createPreview(els.preview);
 
 let draftTimer;
-const editor = createEditor(els.code, els.gutter, {
+const editor = createEditor(els.code, els.gutter, els.marks, {
   onChange: code => {
     preview.schedule(code);
     clearTimeout(draftTimer);
@@ -172,8 +182,36 @@ function pickInitialIndex() {
 }
 
 function setStatus(text, tone) {
-  els.status.textContent = text || '';
+  els.status.replaceChildren(rich(text || ''));
   if (tone) els.status.dataset.tone = tone; else delete els.status.dataset.tone;
+}
+
+/* Список «Строка N: что не так». Клик ставит курсор на строку. */
+function renderDiagnostics(items, title) {
+  if (!items.length) { els.diags.hidden = true; els.diagsList.replaceChildren(); return; }
+  els.diagsTitle.textContent = title;
+  els.diagsList.replaceChildren(...items.map(d => h('li', {},
+    h('button', {
+      class: 'diags__btn', type: 'button', dataset: { tone: d.tone },
+      onclick: () => d.line && editor.goToLine(d.line)
+    },
+      h('span', { class: 'diags__line' }, d.line ? `Строка ${d.line}` : 'Весь код'),
+      h('span', {}, rich(d.message))))));
+  els.diags.hidden = false;
+}
+
+function clearFeedback() {
+  editor.clearMarks();
+  renderDiagnostics([]);
+  els.hintBox.hidden = true;
+  els.btnSolution.hidden = true;
+  els.btnRestore.hidden = true;
+}
+
+function solutionFor(code) {
+  const sol = current.def.solution;
+  if (!sol) return null;
+  return typeof sol === 'function' ? sol(makeContext(code)) : sol;
 }
 
 function renderRequirements(results) {
@@ -210,7 +248,7 @@ async function goTo(index) {
 
   const meta = steps[index];
   const mod = await import(new URL(`../content/${meta.file}`, import.meta.url));
-  current = { index, meta, def: mod.default };
+  current = { index, meta, def: mod.default, ownCode: null, solutionShown: false };
   const { def } = current;
 
   history.replaceState(null, '', `?step=${meta.id}`);
@@ -231,7 +269,7 @@ async function goTo(index) {
   editor.value = draft ?? progress[meta.id]?.finalCode ?? def.starter ?? '';
   preview.render(editor.value);
 
-  els.hintBox.hidden = true;
+  clearFeedback();
   setStatus(done ? 'Шаг пройден.' : '', done ? 'ok' : null);
 
   if (!progress[meta.id]) {
@@ -250,8 +288,9 @@ async function goTo(index) {
 async function check() {
   const { meta, def } = current;
   const code = editor.value;
-  const results = runChecks(code, def.checks);
-  const failed = results.filter(r => !r.ok).map(r => r.id);
+  const { results, diagnostics } = analyze(code, def.checks);
+  const failedResults = results.filter(r => !r.ok);
+  const failed = failedResults.map(r => r.id);
   const passed = failed.length === 0;
   renderRequirements(results);
 
@@ -265,21 +304,40 @@ async function check() {
     if ((STATUS_RANK[progress[meta.id]?.status] || 0) < 2) patch.set.status = 'practice_done';
   }
   progress[meta.id] = await store.updateStep(meta.id, patch);
-  store.logEvent(passed ? 'check_pass' : 'check_fail', meta.id, { failed });
+  store.logEvent(passed ? 'check_pass' : 'check_fail', meta.id, { failed, typos: diagnostics.length });
 
   if (passed) {
-    els.hintBox.hidden = true;
+    clearFeedback();
     setStatus('Все требования выполнены.', 'ok');
     renderButtons();
     runQuiz();
     return;
   }
 
+  /* Подсветка: опечатки – красным, строки невыполненных требований – жёлтым */
+  const labelOf = id => def.checks.find(c => c.id === id)?.label || '';
+  const items = [
+    ...diagnostics.map(d => ({ ...d, tone: 'err' })),
+    ...failedResults.filter(r => r.line && !diagnostics.some(d => d.line === r.line))
+      .map(r => ({ line: r.line, tone: 'warn', message: `Не выполнено: ${labelOf(r.id)}` }))
+  ];
+  editor.mark(items.map(({ line, tone }) => ({ line, tone })));
+  renderDiagnostics(items, 'Что исправить');
+
   const okCount = results.length - failed.length;
   const fails = progress[meta.id].failedAttempts || 0;
+
+  /* Правильный код после SOLUTION_AFTER неудачных проверок */
+  if (fails >= SOLUTION_AFTER && def.solution && !current.solutionShown) {
+    if (SOLUTION_MODE === 'auto') { insertSolution(code); return; }
+    els.btnSolution.hidden = false;
+  }
+
   const level = hintLevel(fails);
   const left = attemptsToNextHint(fails);
-  let text = `Выполнено ${okCount} из ${results.length}.`;
+  let text = `Выполнено ${okCount} из ${results.length}. Не выполнено: ${labelOf(failed[0])}`;
+  if (failed.length > 1) text += ` и ещё ${failed.length - 1}`;
+  text += '.';
   if (level === 0 && left) text += ` Подсказка откроется через ${left} ${plural(left, 'проверку', 'проверки', 'проверок')}.`;
   setStatus(text, 'fail');
 
@@ -291,6 +349,50 @@ async function check() {
     progress[meta.id] = await store.updateStep(meta.id, { max: { hintLevelMax: shown } });
     store.logEvent('hint', meta.id, { check: firstFailed.id, level: shown });
   }
+}
+
+/* Вставить правильный код и показать, чем он отличается от варианта студента */
+async function insertSolution(ownCode) {
+  const { meta } = current;
+  const solution = solutionFor(ownCode);
+  if (!solution) return;
+
+  current.ownCode = ownCode;
+  current.solutionShown = true;
+  editor.value = solution;
+  store.saveDraft(meta.id, solution);
+  preview.render(solution);
+
+  const lines = changedLines(ownCode, solution);
+  const solLines = solution.split('\n');
+  editor.mark(lines.map(line => ({ line, tone: 'fix' })));
+  if (lines.length) editor.goToLine(lines[0]);
+  renderDiagnostics(
+    lines.map(line => ({ line, tone: 'fix', message: '`' + solLines[line - 1].trim() + '`' })),
+    'Правильный вариант отличается в этих строках'
+  );
+  renderRequirements(null);
+  els.hintBox.hidden = true;
+  els.btnSolution.hidden = true;
+  els.btnRestore.hidden = false;
+  setStatus(`После ${SOLUTION_AFTER} попыток вставлен правильный код. Зелёным отмечены строки, которые отличаются от вашего варианта. Сравните и нажмите «Проверить».`, 'ok');
+
+  progress[meta.id] = await store.updateStep(meta.id, {
+    inc: { solutionInserted: 1 },
+    set: { solutionUsed: true }
+  });
+  store.logEvent('solution_inserted', meta.id, { ownCode: ownCode.slice(0, 5000), changedLines: lines });
+}
+
+function restoreOwnCode() {
+  if (current.ownCode == null) return;
+  editor.value = current.ownCode;
+  store.saveDraft(current.meta.id, current.ownCode);
+  preview.render(current.ownCode);
+  clearFeedback();
+  setStatus('Возвращён ваш вариант. Исправьте отмеченные ранее строки и проверьте снова.');
+  store.logEvent('solution_restored', current.meta.id);
+  editor.focus();
 }
 
 function plural(n, one, few, many) {
@@ -335,6 +437,8 @@ async function runQuiz() {
 
 /* ---------- Кнопки ---------- */
 els.btnCheck.addEventListener('click', check);
+els.btnSolution.addEventListener('click', () => insertSolution(editor.value));
+els.btnRestore.addEventListener('click', restoreOwnCode);
 els.btnQuiz.addEventListener('click', runQuiz);
 els.btnNext.addEventListener('click', () => {
   const n = nextIndex();
@@ -347,7 +451,7 @@ els.btnReset.addEventListener('click', () => {
   preview.render(editor.value);
   renderRequirements(null);
   setStatus('');
-  els.hintBox.hidden = true;
+  clearFeedback();
   editor.focus();
 });
 

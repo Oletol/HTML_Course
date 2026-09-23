@@ -6,7 +6,9 @@
      theory     – HTML левой панели (доверенный текст, пишем сами)
      task       – абзацы задания; `в обратных кавычках` – код
      starter    – код, с которым открывается редактор
-     checks     – требования: id, label, test(ctx), hints[3]
+     checks     – требования: id, label, test(ctx), where(ctx), hints[3]
+                  where – строка для подсветки, если требование не выполнено
+     solution   – правильный код; вставляется после 7-й неудачной проверки
      quiz       – вопросы: q, options, correct (индекс), explain
      passScore  – доля верных ответов для прохождения теста
 
@@ -81,11 +83,32 @@ export default {
 
   starter: '',
 
+  /* Правильный вариант. Если студент уже написал своё название и текст,
+     они сохраняются – тогда подсветка покажет только настоящие ошибки. */
+  solution: c => {
+    const title = (c.q('title')?.textContent || '').trim();
+    const body = (c.clean.match(/<body[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1] || '')
+      .replace(/<[^>]*>/g, '').trim().split('\n')[0].trim();
+    const safe = t => t.replace(/[<>]/g, '');
+    return `<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${title.length >= 3 && !/^document$/i.test(title) ? safe(title) : 'Главная – Мой проект'}</title>
+  </head>
+  <body>
+    ${body ? safe(body) : 'Мой проект'}
+  </body>
+</html>`;
+  },
+
   checks: [
     {
       id: 'doctype',
       label: 'Документ начинается с объявления `<!DOCTYPE html>`',
       test: c => /^\s*<!doctype\s+html\s*>/i.test(c.clean),
+      where: c => c.lineOf(/<!doctype[^>]*>/i) ?? 1,
       hints: [
         'Первой строкой файла должно стоять объявление типа документа. Перед ним допустимы только пробелы и пустые строки.',
         'Объявление начинается с восклицательного знака и пишется в угловых скобках, как тег. Закрывающей пары у него нет.',
@@ -97,6 +120,7 @@ export default {
       label: 'У `<html>` указан язык: `lang="ru"`',
       test: c => /<html\b[^>]*\blang\s*=\s*["']?ru\b/i.test(c.clean) &&
         /^ru(-|$)/i.test(c.doc.documentElement.getAttribute('lang') || ''),
+      where: c => c.lineOf(/<html\b/i),
       hints: [
         'Язык указывается атрибутом открывающего тега `<html>`, а не отдельным тегом.',
         'Атрибут пишется внутри угловых скобок после имени тега, через пробел: имя, знак равенства и значение в кавычках.',
@@ -124,6 +148,7 @@ export default {
         return Boolean(first && first.matches('meta[charset]') &&
           /^utf-8$/i.test(first.getAttribute('charset').trim()));
       },
+      where: c => c.lineOf(/<meta[^>]*charset/i) ?? c.lineOf(/<head\b/i),
       hints: [
         'Кодировку задаёт тег `meta` с атрибутом `charset`. Он должен быть самым первым элементом в `head`.',
         'Значение атрибута – название кодировки `utf-8`. У тега `meta` нет закрывающей пары.',
@@ -138,6 +163,7 @@ export default {
         const content = (m?.getAttribute('content') || '').replace(/\s+/g, '');
         return /width=device-width/i.test(content) && /initial-scale=1(\.0)?(,|$)/i.test(content);
       },
+      where: c => c.lineOf(/<meta[^>]*name\s*=\s*["']?view/i) ?? c.lineOf(/<\/head/i),
       hints: [
         'Нужен второй тег `meta` в `head`: у него два атрибута, `name` и `content`.',
         'Атрибут `name` называет настройку: `viewport`. В `content` через запятую две пары: ширина равна ширине устройства и начальный масштаб 1.',
@@ -152,6 +178,7 @@ export default {
         const text = (t?.textContent || '').trim();
         return text.length >= 3 && !/^document$/i.test(text);
       },
+      where: c => c.lineOf(/<title\b/i),
       hints: [
         'Тег `title` должен стоять внутри `head`, а не внутри `body`, и содержать осмысленное название.',
         '`title` – парный тег: между открывающим и закрывающим тегом пишется название. Сначала суть страницы, потом имя проекта.',
@@ -165,6 +192,7 @@ export default {
         const b = c.clean.match(/<body[^>]*>([\s\S]*?)<\/body\s*>/i);
         return Boolean(b && b[1].replace(/<[^>]*>/g, '').trim().length > 0);
       },
+      where: c => c.lineOf(/<body\b/i),
       hints: [
         'Всё, что видно на странице, пишется между `<body>` и `</body>`.',
         'Пока не нужны никакие теги – достаточно обычного текста, например названия вашего проекта.',
