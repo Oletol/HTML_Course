@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход – HTML Course</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="login">
+    <div class="login__card">
+      <p class="login__course">HTML Course</p>
+      <h1 class="login__title">Песочница вёрстки</h1>
+      <p class="login__lead">Короткие шаги: теория, код руками, проверка и тест. Следующий шаг откроется, когда пройден предыдущий.</p>
+
+      <div class="login__resume" id="resume" hidden>
+        <p>Вы вошли как <strong id="resumeName"></strong>.</p>
+        <div class="login__actions">
+          <a class="btn btn--primary" href="learn.html">Продолжить</a>
+          <button class="btn btn--quiet" type="button" id="notMe">Это не я</button>
+        </div>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label class="field__label" for="lastName">Фамилия</label>
+          <input class="field__input" id="lastName" name="lastName" autocomplete="family-name" required maxlength="40">
+          <p class="field__error" id="lastNameError"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="firstName">Имя</label>
+          <input class="field__input" id="firstName" name="firstName" autocomplete="given-name" required maxlength="40">
+          <p class="field__error" id="firstNameError"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="group">Код группы</label>
+          <span class="field__hint" id="groupHint">Его назовёт преподаватель</span>
+          <input class="field__input" id="group" name="group" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="20" aria-describedby="groupHint">
+          <p class="field__error" id="groupError"></p>
+        </div>
+        <div class="login__actions">
+          <button class="btn btn--primary" type="submit">Начать</button>
+        </div>
+        <p class="login__note">Фамилия и имя нужны преподавателю, чтобы видеть ваш прогресс. Пишите так, как в списке группы.</p>
+      </form>
+    </div>
+  </main>
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>

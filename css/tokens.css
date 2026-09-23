@@ -1,0 +1,119 @@
+/* ==================================================================
+   tokens.css – шрифты и цветовые токены дизайн-системы курса.
+   Токены повторяют дизайн-систему страниц Moodle (префикс --fv-).
+   Тёмная тема: по системной настройке или атрибутом data-theme на <html>.
+   Литеральные цвета встречаются только в этом файле.
+   ================================================================== */
+
+/* ---------- Шрифты: латиница и кириллица отдельными файлами ---------- */
+@font-face { font-family: 'FV Display'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/oswald-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: 'FV Display'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/oswald-cyrillic-700-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+@font-face { font-family: 'FV Text'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/pt-sans-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: 'FV Text'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/pt-sans-cyrillic-400-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'FV Text'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/pt-sans-latin-700-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: 'FV Text'; font-weight: 700; font-style: normal; font-display: swap;
+  src: url(../fonts/pt-sans-cyrillic-700-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+@font-face { font-family: 'FV Mono'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/jetbrains-mono-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
+@font-face { font-family: 'FV Mono'; font-weight: 400; font-style: normal; font-display: swap;
+  src: url(../fonts/jetbrains-mono-cyrillic-400-normal.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
+/* ---------- Светлая тема ---------- */
+:root {
+  --fv-ink: #14161E;
+  --fv-ink-2: #454B60;
+  --fv-slate: #4E5675;
+  --fv-slate-soft: #DCDFEA;
+  --fv-electric: #1A40E7;
+  --fv-electric-soft: #E7EAFD;
+  --fv-paper: #F4F5F8;
+  --fv-surface: #FFFFFF;
+  --fv-line: #DCDEE7;
+  --fv-line-soft: #EAECF2;
+  --fv-on-accent: #FFFFFF;
+  --fv-preview: #FFFFFF; /* фон окна результата: как у браузера по умолчанию, в обеих темах */
+
+  --fv-ok: #17693A;
+  --fv-ok-soft: #E3F3E9;
+  --fv-err: #B3261E;
+  --fv-err-soft: #FBE9E7;
+  --fv-warn: #7A4F00;
+  --fv-warn-soft: #FFF3D6;
+
+  --fv-scrim: rgba(20, 22, 30, .45);
+  --fv-shadow: 0 1px 2px rgba(20, 22, 30, .05), 0 12px 32px -12px rgba(20, 22, 30, .22);
+
+  --fv-font-display: 'FV Display', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --fv-font-text: 'FV Text', 'PT Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fv-font-mono: 'FV Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --fv-radius: 10px;
+  --fv-radius-sm: 6px;
+
+  color-scheme: light;
+}
+
+/* ---------- Тёмная тема: по системной настройке ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fv-ink: #EDEFF6;
+    --fv-ink-2: #A9B0C7;
+    --fv-slate: #98A2C6;
+    --fv-slate-soft: #2A2F42;
+    --fv-electric: #8DA2FF;
+    --fv-electric-soft: #20263F;
+    --fv-paper: #171A23;
+    --fv-surface: #11131A;
+    --fv-line: #2C3040;
+    --fv-line-soft: #232735;
+    --fv-on-accent: #0E1020;
+    --fv-ok: #7DD3A0;
+    --fv-ok-soft: #16281E;
+    --fv-err: #FFB4AB;
+    --fv-err-soft: #34191A;
+    --fv-warn: #F2C46B;
+    --fv-warn-soft: #2E2410;
+    --fv-scrim: rgba(0, 0, 0, .6);
+    --fv-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -12px rgba(0, 0, 0, .7);
+    color-scheme: dark;
+  }
+}
+
+/* ---------- Тёмная тема: принудительно ---------- */
+:root[data-theme="dark"] {
+  --fv-ink: #EDEFF6;
+  --fv-ink-2: #A9B0C7;
+  --fv-slate: #98A2C6;
+  --fv-slate-soft: #2A2F42;
+  --fv-electric: #8DA2FF;
+  --fv-electric-soft: #20263F;
+  --fv-paper: #171A23;
+  --fv-surface: #11131A;
+  --fv-line: #2C3040;
+  --fv-line-soft: #232735;
+  --fv-on-accent: #0E1020;
+  --fv-ok: #7DD3A0;
+  --fv-ok-soft: #16281E;
+  --fv-err: #FFB4AB;
+  --fv-err-soft: #34191A;
+  --fv-warn: #F2C46B;
+  --fv-warn-soft: #2E2410;
+  --fv-scrim: rgba(0, 0, 0, .6);
+  --fv-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -12px rgba(0, 0, 0, .7);
+  color-scheme: dark;
+}

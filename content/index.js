@@ -1,0 +1,95 @@
+/* ==================================================================
+   content/index.js – программа песочницы.
+
+   Модуль, в нём разделы, в разделах шаги. Порядок в этом файле = порядок прохождения.
+   У шага:
+     id    – глобальный и неизменный (по нему хранится статистика!)
+     title – название в программе
+     file  – путь к файлу шага от папки content/; нет file – шаг «скоро»
+     type  – 'lesson' (по умолчанию) или 'assignment' (итоговая работа)
+
+   Новые модули (CSS, JavaScript, дизайн-разборы) добавляются сюда
+   так же: новый объект в modules и папка content/<id>/.
+   ================================================================== */
+
+export const modules = [
+  {
+    id: 'html',
+    title: 'HTML',
+    sections: [
+      {
+        title: 'Документ и текст',
+        steps: [
+          { id: 'html-01', title: 'Скелет документа', file: 'html/html-01.js' },
+          { id: 'html-02', title: 'Заголовки и абзацы' },
+          { id: 'html-03', title: 'Смысловое выделение' },
+          { id: 'html-04', title: 'Списки' },
+          { id: 'html-05', title: 'Цвет' }
+        ]
+      },
+      {
+        title: 'Связи и медиа',
+        steps: [
+          { id: 'html-06', title: 'Ссылки' },
+          { id: 'html-07', title: 'Изображения' },
+          { id: 'html-08', title: 'Аудио и видео' },
+          { id: 'html-09', title: 'Встраивание' }
+        ]
+      },
+      {
+        title: 'Структура',
+        steps: [
+          { id: 'html-10', title: 'Семантические блоки' },
+          { id: 'html-11', title: 'Таблицы' },
+          { id: 'html-12', title: 'Раскрывающиеся блоки' }
+        ]
+      },
+      {
+        title: 'Формы',
+        steps: [
+          { id: 'html-13', title: 'Основа формы' },
+          { id: 'html-14', title: 'Типы полей и списки' },
+          { id: 'html-15', title: 'Встроенная проверка' }
+        ]
+      },
+      {
+        title: 'Локализация',
+        steps: [
+          { id: 'html-16', title: 'Язык и локализация' },
+          { id: 'html-17', title: 'Доступность' },
+          { id: 'html-18', title: 'Голова документа' }
+        ]
+      },
+      {
+        title: 'Итоговая работа',
+        steps: [
+          { id: 'html-19', title: 'Свой сайт на чистом HTML', type: 'assignment' }
+        ]
+      }
+    ]
+  }
+];
+
+/* Плоский список шагов с номерами и принадлежностью */
+export function flatSteps() {
+  const out = [];
+  for (const m of modules) {
+    let n = 0;
+    const total = m.sections.reduce((s, sec) => s + sec.steps.length, 0);
+    for (const sec of m.sections) {
+      for (const st of sec.steps) {
+        n++;
+        out.push({
+          ...st,
+          type: st.type || 'lesson',
+          ready: Boolean(st.file),
+          n, total,
+          moduleId: m.id,
+          moduleTitle: m.title,
+          sectionTitle: sec.title
+        });
+      }
+    }
+  }
+  return out;
+}

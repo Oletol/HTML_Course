@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Песочница – HTML Course</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="app">
+
+  <header class="topbar">
+    <button class="btn btn--small" type="button" id="btnProgram" aria-controls="program" aria-expanded="false">Программа</button>
+    <div class="topbar__step">
+      <span class="topbar__num" id="stepNum"></span>
+      <h1 class="topbar__title" id="stepTitle">Загрузка…</h1>
+    </div>
+    <div class="topbar__progress">
+      <span id="progressText"></span>
+      <div class="bar" aria-hidden="true"><div class="bar__fill" id="progressBar"></div></div>
+    </div>
+    <div class="topbar__user">
+      <span class="topbar__name" id="userName"></span>
+      <a class="btn btn--quiet btn--small" href="index.html">Профиль</a>
+    </div>
+  </header>
+
+  <main class="work">
+    <!-- Теория: выделение и копирование отключены -->
+    <section class="theory" id="theory" aria-label="Теория" tabindex="0"></section>
+
+    <section class="practice" aria-label="Практика">
+      <details class="task" id="task" open>
+        <summary class="task__summary">Задание</summary>
+        <div class="task__text" id="taskText"></div>
+        <ul class="reqs" id="reqList" aria-label="Требования"></ul>
+        <div class="hint" id="hintBox" hidden aria-live="polite"></div>
+      </details>
+
+      <div class="pane">
+        <div class="pane__head">
+          <label class="pane__label" for="code">Редактор</label>
+          <span class="pane__tools">
+            <span class="pane__kbd" id="kbdHint">Tab – отступ, Esc и Tab – выйти</span>
+            <button class="btn btn--quiet btn--small" type="button" id="btnReset">Начать заново</button>
+          </span>
+        </div>
+        <div class="editor">
+          <pre class="editor__gutter" id="gutter" aria-hidden="true"></pre>
+          <textarea class="editor__area" id="code"
+            spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+            wrap="off" aria-describedby="kbdHint"
+            placeholder="Наберите код здесь. Вставка отключена."></textarea>
+        </div>
+        <div class="pane__actions">
+            <button class="btn btn--primary" type="button" id="btnCheck">Проверить</button>
+            <button class="btn" type="button" id="btnQuiz" hidden>Пройти тест</button>
+            <button class="btn" type="button" id="btnNext" hidden>Следующий шаг</button>
+            <span class="pane__status" id="status" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="pane preview-pane">
+        <div class="pane__head"><span class="pane__label">Результат</span><span>обновляется сам</span></div>
+        <iframe class="preview" id="preview" title="Результат вашего кода" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <!-- Программа курса -->
+  <div class="scrim" id="scrim" hidden></div>
+  <nav class="drawer" id="program" aria-label="Программа" hidden>
+    <div class="drawer__head">
+      <h2 class="drawer__title">Программа</h2>
+      <button class="btn btn--quiet btn--small" type="button" id="btnProgramClose">Закрыть</button>
+    </div>
+    <div id="programList"></div>
+  </nav>
+
+  <dialog class="dialog" id="quiz"></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
