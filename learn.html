@@ -40,20 +40,36 @@
 
       <div class="pane">
         <div class="pane__head">
-          <label class="pane__label" for="code">Редактор</label>
+          <label class="pane__label" for="code" id="editorLabel">Редактор</label>
+          <div class="tabs" id="fileTabs" role="tablist" aria-label="Файлы" hidden>
+            <button class="tabs__tab" type="button" role="tab" id="tabHtml" aria-controls="editorHtml" aria-selected="true">index.html</button>
+            <button class="tabs__tab" type="button" role="tab" id="tabCss" aria-controls="editorCss" aria-selected="false" tabindex="-1">style.css</button>
+          </div>
           <span class="pane__tools">
             <span class="pane__kbd" id="kbdHint">Tab – отступ, Esc и Tab – выйти</span>
             <button class="btn btn--quiet btn--small" type="button" id="btnReset">Начать заново</button>
           </span>
         </div>
-        <div class="editor">
-          <pre class="editor__gutter" id="gutter" aria-hidden="true"></pre>
-<div class="editor__code">
-            <div class="editor__marks" id="marks" aria-hidden="true"></div>
-            <textarea class="editor__area" id="code"
-              spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-              wrap="off" aria-describedby="kbdHint"
-              placeholder="Наберите код здесь. Вставка отключена."></textarea>
+        <div class="editors">
+          <div class="editor" id="editorHtml" role="tabpanel" aria-labelledby="tabHtml">
+            <pre class="editor__gutter" id="gutter" aria-hidden="true"></pre>
+            <div class="editor__code">
+              <div class="editor__marks" id="marks" aria-hidden="true"></div>
+              <textarea class="editor__area" id="code"
+                spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+                wrap="off" aria-describedby="kbdHint"
+                placeholder="Наберите код здесь. Вставка отключена."></textarea>
+            </div>
+          </div>
+          <div class="editor" id="editorCss" role="tabpanel" aria-labelledby="tabCss" hidden>
+            <pre class="editor__gutter" id="gutterCss" aria-hidden="true"></pre>
+            <div class="editor__code">
+              <div class="editor__marks" id="marksCss" aria-hidden="true"></div>
+              <textarea class="editor__area" id="codeCss" aria-label="style.css"
+                spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+                wrap="off" aria-describedby="kbdHint"
+                placeholder="Таблица стилей style.css. Вставка отключена."></textarea>
+            </div>
           </div>
         </div>
         <div class="diags" id="diags" hidden>
@@ -78,8 +94,42 @@
       </div>
 
       <div class="pane preview-pane">
-        <div class="pane__head"><span class="pane__label">Результат</span><span>обновляется сам</span></div>
-        <iframe class="preview" id="preview" title="Результат вашего кода" sandbox="allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+        <div class="pane__head">
+          <span class="pane__label">Результат</span>
+          <div class="preview-tools" id="previewTools" hidden>
+            <label>Ширина
+              <select id="optWidth">
+                <option value="auto">по окну</option>
+                <option value="320">320</option>
+                <option value="768">768</option>
+                <option value="1280">1280</option>
+              </select>
+            </label>
+            <label>Тема
+              <select id="optTheme">
+                <option value="auto">системная</option>
+                <option value="light">светлая</option>
+                <option value="dark">тёмная</option>
+              </select>
+            </label>
+            <label>Письмо
+              <select id="optDir">
+                <option value="auto">слева направо</option>
+                <option value="rtl">справа налево</option>
+              </select>
+            </label>
+            <label>Анимация
+              <select id="optMotion">
+                <option value="auto">обычная</option>
+                <option value="reduce">уменьшенная</option>
+              </select>
+            </label>
+          </div>
+          <span id="previewNote">обновляется сам</span>
+        </div>
+        <div class="preview-stage" id="previewStage">
+          <iframe class="preview" id="preview" title="Результат вашего кода" sandbox="allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+        </div>
       </div>
     </section>
     <!-- Итоговая работа: появляется вместо практики -->

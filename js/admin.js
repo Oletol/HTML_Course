@@ -19,7 +19,7 @@ import { rich, toast, h } from './ui.js';
 const $ = id => document.getElementById(id);
 const steps = flatSteps();
 const stepIndex = Object.fromEntries(steps.map((s, i) => [s.id, i]));
-const TOTAL = steps.filter(s => s.moduleId === 'html').length;
+const TOTAL = steps.filter(s => s.ready).length; /* все опубликованные шаги всех модулей */
 const ACTIVE_MS = 5 * 60 * 1000;
 
 let students = [];
@@ -236,14 +236,14 @@ async function openStudent(s) {
     const [text, cls] = STATUS[p.status] || ['–', 'badge--muted'];
     const errs = topFailed(st.id, p.failedChecks);
     return h('tr', {},
-      h('th', { scope: 'row' }, `${st.n}. ${st.title}`),
+      h('th', { scope: 'row' }, `${st.moduleId === 'html' ? '' : st.moduleTitle + ', '}${st.n}. ${st.title}`),
       h('td', {}, h('span', { class: `badge ${cls}` }, text)),
       h('td', { class: 'num' }, duration(p.activeSec)),
       h('td', { class: 'num' }, `${p.checkAttempts || 0} / ${p.failedAttempts || 0}`),
       h('td', { class: 'num' }, p.quizAttempts ? `${Math.round((p.quizBestScore || 0) * 100)} % за ${p.quizAttempts}` : '–'),
       h('td', {}, p.solutionUsed ? h('span', { class: 'badge badge--warn' }, 'да') : 'нет'),
       h('td', {}, errs.length ? errs.map(e => h('div', {}, rich(e.label), ` – ${e.count}`)) : '–'),
-      h('td', {}, p.finalCode ? h('button', { class: 'btn btn--small', type: 'button', onclick: () => showCode(body, st, p.finalCode) }, 'Код') : '–')
+      h('td', {}, p.finalCode ? h('button', { class: 'btn btn--small', type: 'button', onclick: () => showCode(body, st, p) }, 'Код') : '–')
     );
   });
 
@@ -270,9 +270,13 @@ async function openStudent(s) {
   );
 }
 
-function showCode(body, st, code) {
+function showCode(body, st, p) {
   const slot = body.querySelector('#codeSlot');
-  slot.replaceChildren(h('h3', {}, `Код, сданный на шаге ${st.n}`), h('pre', { class: 'code-view' }, code));
+  slot.replaceChildren(
+    h('h3', {}, `Код, сданный на шаге «${st.title}» (${st.moduleTitle})`),
+    ...(p.finalCss != null ? [h('p', {}, 'index.html')] : []),
+    h('pre', { class: 'code-view' }, p.finalCode),
+    ...(p.finalCss != null ? [h('p', {}, 'style.css'), h('pre', { class: 'code-view' }, p.finalCss)] : []));
   slot.scrollIntoView({ block: 'nearest' });
 }
 

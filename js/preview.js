@@ -47,11 +47,66 @@ export function buildSrcdoc(code) {
   return META + code;
 }
 
+/* ---------- Подстановка style.css и настройки окна результата ----------
+   Для шагов CSS окно результата подставляет содержимое вкладки style.css
+   на место <link rel="stylesheet" href="style.css">. Нет ссылки – нет стилей:
+   так студент видит, что таблицу стилей нужно подключить.
+
+   Настройки (settings):
+     theme  'auto' | 'light' | 'dark'   – имитация prefers-color-scheme
+     motion 'auto' | 'reduce'           – имитация prefers-reduced-motion
+     dir    'auto' | 'rtl'              – направление письма страницы
+   Имитация работает переписыванием условий @media в копии стилей:
+   системные настройки браузера при этом не меняются. */
+
+const ALWAYS = 'min-width: 0px';
+const NEVER = 'max-width: 0.01px';
+
+export function transformMedia(css, s = {}) {
+  let out = String(css ?? '');
+  if (s.theme === 'dark' || s.theme === 'light') {
+    const other = s.theme === 'dark' ? 'light' : 'dark';
+    out = out.replace(new RegExp(`prefers-color-scheme\\s*:\\s*${s.theme}`, 'gi'), ALWAYS)
+      .replace(new RegExp(`prefers-color-scheme\\s*:\\s*${other}`, 'gi'), NEVER);
+  }
+  if (s.motion === 'reduce') {
+    out = out.replace(/prefers-reduced-motion\s*:\s*reduce/gi, ALWAYS)
+      .replace(/prefers-reduced-motion\s*:\s*no-preference/gi, NEVER);
+  }
+  return out;
+}
+
+const LINK_RE = /<link\b[^>]*>/gi;
+const isStyleLink = tag => /\brel\s*=\s*["']?[^"'>]*stylesheet/i.test(tag) &&
+  /\bhref\s*=\s*["']?(?:\.\/)?style\.css["'\s>]/i.test(tag);
+
+export function buildDocument(html, css, s = {}) {
+  let doc = String(html ?? '');
+  if (css != null) {
+    const styled = transformMedia(css, s).replace(/<\/style/gi, '<\\/style');
+    let used = false;
+    doc = doc.replace(LINK_RE, tag => {
+      if (used || !isStyleLink(tag)) return tag;
+      used = true;
+      return `<style data-file="style.css">\n${styled}\n</style>`;
+    });
+  }
+  if (s.dir === 'rtl') {
+    doc = doc.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs.replace(/\sdir\s*=\s*["']?\w+["']?/i, '')} dir="rtl">`);
+  }
+  return buildSrcdoc(doc);
+}
+
 export function createPreview(iframe, delay = 450, { onFormSubmit } = {}) {
   iframe.setAttribute('sandbox', 'allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   let timer;
-  const render = code => { iframe.srcdoc = buildSrcdoc(code); };
+  let settings = {};
+  let last = { html: '', css: null };
+  const render = (html, css = null) => {
+    last = { html, css };
+    iframe.srcdoc = buildDocument(html, css, settings);
+  };
 
   /* Ссылки внутри окна результата обрабатывает сама песочница:
      в srcdoc якорь «#id» иначе открыл бы в окне всю страницу курса,
@@ -79,6 +134,8 @@ export function createPreview(iframe, delay = 450, { onFormSubmit } = {}) {
   });
   return {
     render,
-    schedule(code) { clearTimeout(timer); timer = setTimeout(() => render(code), delay); }
+    schedule(html, css = null) { clearTimeout(timer); timer = setTimeout(() => render(html, css), delay); },
+    setSettings(next) { settings = { ...settings, ...next }; render(last.html, last.css); },
+    get settings() { return { ...settings }; }
   };
 }

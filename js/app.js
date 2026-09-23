@@ -26,6 +26,8 @@ import { createTracker } from './tracker.js';
 import { rich, paragraphs, toast, h } from './ui.js';
 import { FALLBACK_START } from '../content/html/shared.js';
 import { checkSite } from './sitecheck.js';
+import { analyzeCss, parseCss } from './cssvalidator.js';
+import { BASE_PAGE } from '../content/css/base-page.js';
 
 const MAX_CODE = 20000;
 
@@ -67,7 +69,20 @@ let progress = await store.loadProgress();
 let current = null; /* { index, meta, def, ownCode, solutionShown } */
 
 const isDone = id => progress[id]?.status === 'completed';
-const accessible = i => steps[i]?.ready && steps.slice(0, i).every(s => isDone(s.id));
+const lessonsOf = moduleId => steps.filter(s => s.moduleId === moduleId && s.type !== 'assignment');
+
+/* Модуль открыт, если пройдены все учебные шаги модуля из requires.
+   Итоговые работы доступ к следующему модулю не блокируют. */
+const moduleOpen = moduleId => {
+  const req = steps.find(s => s.moduleId === moduleId)?.moduleRequires;
+  return !req || lessonsOf(req).every(s => isDone(s.id));
+};
+/* Шаг открыт, если открыт модуль и пройдены предыдущие учебные шаги этого модуля */
+const accessible = i => {
+  const s = steps[i];
+  if (!s?.ready || !moduleOpen(s.moduleId)) return false;
+  return steps.slice(0, i).filter(p => p.moduleId === s.moduleId && p.type !== 'assignment').every(p => isDone(p.id));
+};
 
 /* ---------- Сервисы ---------- */
 const tracker = createTracker({
@@ -80,24 +95,120 @@ const preview = createPreview(els.preview, 450, {
   onFormSubmit: () => toast('Форма прошла встроенную проверку браузера. В песочнице отправка отключена, данные никуда не ушли.')
 });
 
+/* ---------- Рабочее пространство: один файл (HTML) или два (HTML и CSS) ---------- */
+let multi = false;
+let activeFile = 'html';
 let draftTimer;
-const editor = createEditor(els.code, els.gutter, els.marks, {
-  onChange: code => {
-    preview.schedule(code);
+
+const fileLabel = f => (f === 'css' ? 'style.css' : 'index.html');
+
+function currentCode() {
+  return multi ? { html: editors.html.value, css: editors.css.value } : editors.html.value;
+}
+function setCode(code) {
+  if (multi) {
+    editors.html.value = code?.html ?? '';
+    editors.css.value = code?.css ?? '';
+  } else {
+    editors.html.value = typeof code === 'string' ? code : (code?.html ?? '');
+  }
+}
+function renderNow() {
+  if (multi) preview.render(editors.html.value, editors.css.value);
+  else preview.render(editors.html.value);
+}
+function saveDraftNow() {
+  if (!current) return;
+  store.saveDraft(current.meta.id, multi ? JSON.stringify(currentCode()) : editors.html.value);
+}
+function readDraft(stepId) {
+  const raw = store.getDraft(stepId);
+  if (raw == null) return null;
+  if (!multi) return raw;
+  try { const o = JSON.parse(raw); return o && typeof o === 'object' ? o : null; } catch { return null; }
+}
+
+const editorHandlers = file => ({
+  onChange: () => {
+    if (multi) preview.schedule(editors.html.value, editors.css.value);
+    else preview.schedule(editors.html.value);
     clearTimeout(draftTimer);
-    draftTimer = setTimeout(() => current && store.saveDraft(current.meta.id, code), 400);
+    draftTimer = setTimeout(saveDraftNow, 400);
   },
   onBlocked: type => {
     toast('Вставка отключена: наберите код вручную.');
     if (current) {
       store.updateStep(current.meta.id, { inc: { pasteBlocked: 1 } }).then(p => { progress[current.meta.id] = p; });
-      store.logEvent('paste_blocked', current.meta.id, { type });
+      store.logEvent('paste_blocked', current.meta.id, { type, file });
     }
   },
   onSuspicious: length => {
-    if (current) store.logEvent('bulk_insert', current.meta.id, { length });
+    if (current) store.logEvent('bulk_insert', current.meta.id, { length, file });
   }
 });
+
+const editors = {
+  html: createEditor(els.code, els.gutter, els.marks, editorHandlers('html')),
+  css: createEditor($('codeCss'), $('gutterCss'), $('marksCss'), editorHandlers('css'))
+};
+const editor = editors.html;
+
+const tabs = { html: $('tabHtml'), css: $('tabCss') };
+const panels = { html: $('editorHtml'), css: $('editorCss') };
+
+function showFile(file, focus = false) {
+  activeFile = file;
+  for (const f of ['html', 'css']) {
+    const on = f === file;
+    tabs[f].setAttribute('aria-selected', String(on));
+    tabs[f].tabIndex = on ? 0 : -1;
+    panels[f].hidden = !on;
+  }
+  if (focus) editors[file].focus();
+}
+Object.entries(tabs).forEach(([f, tab]) => {
+  tab.addEventListener('click', () => showFile(f, true));
+  tab.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = f === 'html' ? 'css' : 'html';
+      showFile(next);
+      tabs[next].focus();
+    }
+  });
+});
+
+function setMode(isMulti) {
+  multi = isMulti;
+  $('fileTabs').hidden = !isMulti;
+  $('editorLabel').hidden = isMulti;
+  $('previewTools').hidden = !isMulti;
+  $('previewNote').hidden = isMulti;
+  if (!isMulti) {
+    panels.css.hidden = true; panels.html.hidden = false; activeFile = 'html';
+    els.preview.style.removeProperty('inline-size');
+    delete $('previewStage').dataset.width;
+    preview.setSettings({ theme: 'auto', dir: 'auto', motion: 'auto' });
+  }
+}
+
+/* ---------- Настройки окна результата (модули CSS) ---------- */
+const PREVIEW_KEY = 'html-sandbox:preview';
+const opts = { width: $('optWidth'), theme: $('optTheme'), dir: $('optDir'), motion: $('optMotion') };
+function applyPreviewSettings() {
+  const s = Object.fromEntries(Object.entries(opts).map(([k, el]) => [k, el.value]));
+  try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(s)); } catch { /* ничего */ }
+  const stage = $('previewStage');
+  if (s.width === 'auto') { els.preview.style.removeProperty('inline-size'); delete stage.dataset.width; }
+  else { els.preview.style.inlineSize = `${s.width}px`; stage.dataset.width = s.width; }
+  preview.setSettings({ theme: s.theme, dir: s.dir, motion: s.motion });
+}
+try {
+  const saved = JSON.parse(localStorage.getItem(PREVIEW_KEY) || '{}');
+  Object.entries(saved).forEach(([k, v]) => { if (opts[k] && [...opts[k].options].some(o => o.value === v)) opts[k].value = v; });
+} catch { /* ничего */ }
+Object.values(opts).forEach(el => el.addEventListener('change', applyPreviewSettings));
+const previewSettings = () => (multi ? { theme: opts.theme.value, dir: opts.dir.value, motion: opts.motion.value } : {});
 
 /* Копирование учебных текстов */
 const onCopyAttempt = type => {
@@ -108,7 +219,7 @@ const onCopyAttempt = type => {
   }
 };
 [els.theory, els.task, els.hintBox, els.quiz].forEach(el => protect(el, onCopyAttempt));
-guardDocument([els.code], onCopyAttempt);
+guardDocument([els.code, $('codeCss')], onCopyAttempt);
 
 /* ==================================================================
    Программа и прогресс
@@ -128,6 +239,10 @@ function renderProgram() {
   steps.forEach((s, i) => {
     if (s.moduleId !== lastModule) {
       root.append(h('p', { class: 'drawer__module' }, `Модуль ${s.moduleTitle}`));
+      if (!moduleOpen(s.moduleId)) {
+        const req = steps.find(x => x.moduleId === s.moduleRequires);
+        root.append(h('p', { class: 'drawer__note' }, `Откроется после учебных шагов модуля ${req?.moduleTitle || ''}. Итоговая работа для этого не нужна.`));
+      }
       lastModule = s.moduleId; lastSection = null;
     }
     if (s.sectionTitle !== lastSection) {
@@ -198,15 +313,20 @@ function renderDiagnostics(items, title) {
   els.diagsList.replaceChildren(...items.map(d => h('li', {},
     h('button', {
       class: 'diags__btn', type: 'button', dataset: { tone: d.tone },
-      onclick: () => d.line && editor.goToLine(d.line)
+      onclick: () => {
+        const f = d.file || 'html';
+        if (multi) showFile(f);
+        if (d.line) editors[f].goToLine(d.line);
+      }
     },
-      h('span', { class: 'diags__line' }, d.line ? `Строка ${d.line}` : 'Весь код'),
+      h('span', { class: 'diags__line' }, d.line ? `${multi ? fileLabel(d.file || 'html') + ', с' : 'С'}трока ${d.line}` : 'Весь код'),
       h('span', {}, rich(d.message))))));
   els.diags.hidden = false;
 }
 
 function clearFeedback() {
-  editor.clearMarks();
+  editors.html.clearMarks();
+  editors.css.clearMarks();
   renderDiagnostics([]);
   els.hintBox.hidden = true;
   els.btnSolution.hidden = true;
@@ -216,7 +336,8 @@ function clearFeedback() {
 function solutionFor(code) {
   const sol = current.def.solution;
   if (!sol) return null;
-  return typeof sol === 'function' ? sol(makeContext(code)) : sol;
+  if (typeof sol !== 'function') return sol;
+  return multi ? sol({ html: makeContext(code.html), css: parseCss(code.css) }) : sol(makeContext(code));
 }
 
 function renderRequirements(results) {
@@ -234,6 +355,17 @@ function renderRequirements(results) {
 /* Код, с которым шаг открывается впервые или после «Начать заново».
    starter: 'previous' – код, сданный на предыдущем шаге. */
 function startCode(index, def) {
+  if (def.files) {
+    const st = def.starter || {};
+    const prev = steps[index - 1];
+    const lastHtmlLesson = lessonsOf('html').at(-1);
+    let html = BASE_PAGE;
+    if (st.html === 'html-module') html = progress[lastHtmlLesson?.id]?.finalCode || BASE_PAGE;
+    else if (st.html === 'previous') html = (prev && progress[prev.id]?.finalCode) || BASE_PAGE;
+    else if (typeof st.html === 'string') html = st.html;
+    const css = st.css === 'previous' ? ((prev && progress[prev.id]?.finalCss) || '') : (st.css ?? '');
+    return { html, css };
+  }
   if (def.starter !== 'previous') return def.starter ?? '';
   const prev = steps[index - 1];
   return (prev && progress[prev.id]?.finalCode) || def.fallbackStarter || FALLBACK_START;
@@ -251,8 +383,11 @@ function renderButtons() {
   els.btnQuiz.textContent = rank >= 3 ? 'Пройти тест ещё раз' : 'Пройти тест';
   const n = nextIndex();
   els.btnNext.hidden = !(rank >= 3 && n >= 0);
-  els.btnNext.disabled = !(n >= 0 && steps[n].ready);
-  els.btnNext.textContent = n >= 0 && steps[n].ready ? 'Следующий шаг' : 'Следующий шаг скоро';
+  const open = n >= 0 && accessible(n);
+  els.btnNext.disabled = !open;
+  const otherModule = n >= 0 && steps[n].moduleId !== current.meta.moduleId;
+  els.btnNext.textContent = !open ? (steps[n]?.ready ? 'Следующий шаг закрыт' : 'Следующий шаг скоро')
+    : otherModule ? `Модуль ${steps[n].moduleTitle}` : 'Следующий шаг';
 }
 
 async function goTo(index) {
@@ -290,15 +425,20 @@ async function goTo(index) {
     return;
   }
 
+  setMode(Boolean(def.files));
   els.taskText.replaceChildren(paragraphs(def.task));
   els.task.open = true;
 
   const done = isDone(meta.id);
   renderRequirements(done ? def.checks.map(c => ({ id: c.id, ok: true })) : null);
 
-  const draft = store.getDraft(meta.id);
-  editor.value = draft ?? progress[meta.id]?.finalCode ?? startCode(index, def);
-  preview.render(editor.value);
+  const draft = readDraft(meta.id);
+  const saved = progress[meta.id]?.finalCode != null
+    ? (multi ? { html: progress[meta.id].finalCode, css: progress[meta.id].finalCss ?? '' } : progress[meta.id].finalCode)
+    : null;
+  setCode(draft ?? saved ?? startCode(index, def));
+  if (multi) { showFile(def.openFile || 'css'); applyPreviewSettings(); }
+  renderNow();
 
   clearFeedback();
   setStatus(done ? 'Шаг пройден.' : '', done ? 'ok' : null);
@@ -318,8 +458,17 @@ async function goTo(index) {
 /* ---------- Проверка ---------- */
 async function check() {
   const { meta, def } = current;
-  const code = editor.value;
-  const { results, diagnostics } = analyze(code, def.checks);
+  const code = currentCode();
+  els.btnCheck.disabled = true;
+  let analysis;
+  try {
+    analysis = multi
+      ? await analyzeCss({ html: code.html, css: code.css, checks: def.checks, settings: previewSettings() })
+      : analyze(code, def.checks);
+  } finally {
+    els.btnCheck.disabled = false;
+  }
+  const { results, diagnostics } = analysis;
   const failedResults = results.filter(r => !r.ok);
   const failed = failedResults.map(r => r.id);
   const passed = failed.length === 0;
@@ -331,7 +480,12 @@ async function check() {
   };
   if (failed.length) patch.incMap = { failedChecks: Object.fromEntries(failed.map(id => [id, 1])) };
   if (passed) {
-    patch.set.finalCode = code.slice(0, MAX_CODE);
+    if (multi) {
+      patch.set.finalCode = code.html.slice(0, MAX_CODE);
+      patch.set.finalCss = code.css.slice(0, MAX_CODE);
+    } else {
+      patch.set.finalCode = code.slice(0, MAX_CODE);
+    }
     if ((STATUS_RANK[progress[meta.id]?.status] || 0) < 2) patch.set.status = 'practice_done';
   }
   progress[meta.id] = await store.updateStep(meta.id, patch);
@@ -348,11 +502,14 @@ async function check() {
   /* Подсветка: опечатки – красным, строки невыполненных требований – жёлтым */
   const labelOf = id => def.checks.find(c => c.id === id)?.label || '';
   const items = [
-    ...diagnostics.map(d => ({ ...d, tone: 'err' })),
-    ...failedResults.filter(r => r.line && !diagnostics.some(d => d.line === r.line))
-      .map(r => ({ line: r.line, tone: 'warn', message: `Не выполнено: ${labelOf(r.id)}` }))
+    ...diagnostics.map(d => ({ ...d, file: d.file || 'html', tone: 'err' })),
+    ...failedResults.filter(r => r.line && !diagnostics.some(d => d.line === r.line && (d.file || 'html') === (r.file || 'html')))
+      .map(r => ({ line: r.line, file: r.file || (multi ? 'css' : 'html'), tone: 'warn', message: `Не выполнено: ${labelOf(r.id)}` }))
   ];
-  editor.mark(items.map(({ line, tone }) => ({ line, tone })));
+  for (const f of ['html', 'css']) {
+    editors[f].mark(items.filter(it => it.file === f).map(({ line, tone }) => ({ line, tone })));
+  }
+  if (multi && items[0] && items[0].file !== activeFile && !items.some(it => it.file === activeFile)) showFile(items[0].file);
   renderDiagnostics(items, 'Что исправить');
 
   const okCount = results.length - failed.length;
@@ -390,16 +547,21 @@ async function insertSolution(ownCode) {
 
   current.ownCode = ownCode;
   current.solutionShown = true;
-  editor.value = solution;
-  store.saveDraft(meta.id, solution);
-  preview.render(solution);
+  setCode(solution);
+  saveDraftNow();
+  renderNow();
 
-  const lines = changedLines(ownCode, solution);
-  const solLines = solution.split('\n');
-  editor.mark(lines.map(line => ({ line, tone: 'fix' })));
-  if (lines.length) editor.goToLine(lines[0]);
+  const files = multi ? ['html', 'css'] : ['html'];
+  const own = f => (multi ? ownCode[f] : ownCode);
+  const sol = f => (multi ? solution[f] : solution);
+  const changes = files.flatMap(f => changedLines(own(f), sol(f)).map(line => ({ file: f, line })));
+  for (const f of files) editors[f].mark(changes.filter(c => c.file === f).map(c => ({ line: c.line, tone: 'fix' })));
+  if (changes.length) {
+    if (multi) showFile(changes[0].file);
+    editors[changes[0].file].goToLine(changes[0].line);
+  }
   renderDiagnostics(
-    lines.map(line => ({ line, tone: 'fix', message: '`' + solLines[line - 1].trim() + '`' })),
+    changes.map(c => ({ ...c, tone: 'fix', message: '`' + sol(c.file).split('\n')[c.line - 1].trim() + '`' })),
     'Правильный вариант отличается в этих строках'
   );
   renderRequirements(null);
@@ -412,18 +574,19 @@ async function insertSolution(ownCode) {
     inc: { solutionInserted: 1 },
     set: { solutionUsed: true }
   });
-  store.logEvent('solution_inserted', meta.id, { ownCode: ownCode.slice(0, 5000), changedLines: lines });
+  const ownText = multi ? `${ownCode.html}\n/* style.css */\n${ownCode.css}` : ownCode;
+  store.logEvent('solution_inserted', meta.id, { ownCode: ownText.slice(0, 5000), changedLines: changes.map(c => `${c.file}:${c.line}`) });
 }
 
 function restoreOwnCode() {
   if (current.ownCode == null) return;
-  editor.value = current.ownCode;
-  store.saveDraft(current.meta.id, current.ownCode);
-  preview.render(current.ownCode);
+  setCode(current.ownCode);
+  saveDraftNow();
+  renderNow();
   clearFeedback();
   setStatus('Возвращён ваш вариант. Исправьте отмеченные ранее строки и проверьте снова.');
   store.logEvent('solution_restored', current.meta.id);
-  editor.focus();
+  editors[activeFile].focus();
 }
 
 function plural(n, one, few, many) {
@@ -572,8 +735,16 @@ function renderAssignment() {
 
   btnRun.addEventListener('click', runCheck);
 
+  const n = nextIndex();
+  const nextModule = n >= 0 && steps[n].moduleId !== meta.moduleId && accessible(n)
+    ? h('p', { class: 'assignment__next' }, h('button', { class: 'btn', type: 'button', onclick: () => goTo(n) },
+        `Перейти к модулю ${steps[n].moduleTitle}`),
+      ' Итоговую работу можно сдать позже: следующий модуль уже открыт.')
+    : null;
+
   box.replaceChildren(
     h('h2', { class: 'assignment__title' }, 'Сдача работы'),
+    ...(nextModule ? [nextModule] : []),
     h('p', {}, `Оценка – до ${def.points} баллов, выставляется в Moodle. Здесь сохраните ссылки, проверьте опубликованный сайт и отметьте пункты самопроверки.`),
     h('form', { class: 'assignment__form', onsubmit: saveLinks, novalidate: true },
       h('div', { class: 'field' }, h('label', { class: 'field__label', for: 'siteUrl' }, 'Адрес сайта на GitHub Pages'), siteInput, siteErr),
@@ -594,7 +765,7 @@ function renderAssignment() {
 
 /* ---------- Кнопки ---------- */
 els.btnCheck.addEventListener('click', check);
-els.btnSolution.addEventListener('click', () => insertSolution(editor.value));
+els.btnSolution.addEventListener('click', () => insertSolution(currentCode()));
 els.btnRestore.addEventListener('click', restoreOwnCode);
 els.btnQuiz.addEventListener('click', runQuiz);
 els.btnNext.addEventListener('click', () => {
@@ -603,19 +774,19 @@ els.btnNext.addEventListener('click', () => {
 });
 els.btnReset.addEventListener('click', () => {
   if (!confirm('Стереть код в редакторе и начать шаг заново? Статистика попыток сохранится.')) return;
-  editor.value = startCode(current.index, current.def);
-  store.saveDraft(current.meta.id, editor.value);
-  preview.render(editor.value);
+  setCode(startCode(current.index, current.def));
+  saveDraftNow();
+  renderNow();
   renderRequirements(null);
   setStatus('');
   clearFeedback();
-  editor.focus();
+  editors[activeFile].focus();
 });
 
 /* Cmd/Ctrl+Enter – проверить */
-els.code.addEventListener('keydown', e => {
+[els.code, $('codeCss')].forEach(area => area.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); check(); }
-});
+}));
 
 /* ---------- Старт ---------- */
 goTo(pickInitialIndex());
