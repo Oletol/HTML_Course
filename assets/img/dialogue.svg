@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#F4F5F8"/>
+  <path d="M110 120 h330 a30 30 0 0 1 30 30 v130 a30 30 0 0 1 -30 30 h-230 l-60 55 v-55 h-40 a30 30 0 0 1 -30 -30 v-130 a30 30 0 0 1 30 -30 z" fill="#1A40E7"/>
+  <text x="275" y="238" font-family="Arial, sans-serif" font-size="84" font-weight="700" fill="#FFFFFF" text-anchor="middle">Привет</text>
+  <path d="M690 290 h-330 a30 30 0 0 0 -30 30 v130 a30 30 0 0 0 30 30 h230 l60 55 v-55 h40 a30 30 0 0 0 30 -30 v-130 a30 30 0 0 0 -30 -30 z" fill="#4E5675"/>
+  <text x="525" y="408" font-family="Arial, sans-serif" font-size="84" font-weight="700" fill="#FFFFFF" text-anchor="middle">Hello</text>
+</svg>

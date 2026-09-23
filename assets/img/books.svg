@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#E7EAFD"/>
+  <rect x="0" y="470" width="800" height="130" fill="#DCDFEA"/>
+  <rect x="170" y="415" width="460" height="58" rx="6" fill="#4E5675"/>
+  <rect x="190" y="430" width="420" height="8" rx="4" fill="#DCDFEA"/>
+  <rect x="210" y="357" width="400" height="58" rx="6" fill="#1A40E7"/>
+  <rect x="230" y="372" width="360" height="8" rx="4" fill="#E7EAFD"/>
+  <rect x="190" y="299" width="430" height="58" rx="6" fill="#14161E"/>
+  <rect x="210" y="314" width="390" height="8" rx="4" fill="#A9B0C7"/>
+  <rect x="240" y="241" width="350" height="58" rx="6" fill="#98A2C6"/>
+  <rect x="260" y="256" width="310" height="8" rx="4" fill="#FFFFFF"/>
+  <g transform="rotate(-8 480 190)">
+    <rect x="330" y="160" width="300" height="80" rx="8" fill="#FFFFFF" stroke="#4E5675" stroke-width="6"/>
+    <line x1="480" y1="165" x2="480" y2="235" stroke="#4E5675" stroke-width="4"/>
+    <line x1="355" y1="185" x2="460" y2="185" stroke="#A9B0C7" stroke-width="5" stroke-linecap="round"/>
+    <line x1="355" y1="205" x2="450" y2="205" stroke="#A9B0C7" stroke-width="5" stroke-linecap="round"/>
+    <line x1="500" y1="185" x2="605" y2="185" stroke="#A9B0C7" stroke-width="5" stroke-linecap="round"/>
+    <line x1="500" y1="205" x2="590" y2="205" stroke="#A9B0C7" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>
