@@ -24,6 +24,7 @@ import { hintLevel, attemptsToNextHint, renderHint } from './hints.js';
 import { openQuiz } from './quiz.js';
 import { createTracker } from './tracker.js';
 import { rich, paragraphs, toast, h } from './ui.js';
+import { FALLBACK_START } from '../content/html/shared.js';
 
 const MAX_CODE = 20000;
 
@@ -226,6 +227,14 @@ function renderRequirements(results) {
   }));
 }
 
+/* Код, с которым шаг открывается впервые или после «Начать заново».
+   starter: 'previous' – код, сданный на предыдущем шаге. */
+function startCode(index, def) {
+  if (def.starter !== 'previous') return def.starter ?? '';
+  const prev = steps[index - 1];
+  return (prev && progress[prev.id]?.finalCode) || def.fallbackStarter || FALLBACK_START;
+}
+
 function nextIndex() {
   const i = current.index + 1;
   return i < steps.length ? i : -1;
@@ -266,7 +275,7 @@ async function goTo(index) {
   renderRequirements(done ? def.checks.map(c => ({ id: c.id, ok: true })) : null);
 
   const draft = store.getDraft(meta.id);
-  editor.value = draft ?? progress[meta.id]?.finalCode ?? def.starter ?? '';
+  editor.value = draft ?? progress[meta.id]?.finalCode ?? startCode(index, def);
   preview.render(editor.value);
 
   clearFeedback();
@@ -446,7 +455,7 @@ els.btnNext.addEventListener('click', () => {
 });
 els.btnReset.addEventListener('click', () => {
   if (!confirm('Стереть код в редакторе и начать шаг заново? Статистика попыток сохранится.')) return;
-  editor.value = current.def.starter ?? '';
+  editor.value = startCode(current.index, current.def);
   store.saveDraft(current.meta.id, editor.value);
   preview.render(editor.value);
   renderRequirements(null);

@@ -28,6 +28,8 @@
    кавычки и угловые скобки, лишние закрывающие теги у пустых элементов.
    ================================================================== */
 
+import { NAMED, parseColor } from './colors.js';
+
 export function stripComments(code) {
   return code.replace(/<!--[\s\S]*?-->/g, m => m.replace(/[^\n]/g, ' '));
 }
@@ -99,6 +101,37 @@ function closest(word, list) {
   return bestD > 0 && bestD <= limit ? best : null;
 }
 
+/* ---------- Ошибки в атрибуте style ---------- */
+const NAMED_LIST = Object.keys(NAMED);
+const COLOR_PROPS = new Set(['color', 'background-color', 'border-color', 'outline-color']);
+
+function diagnoseStyle(value, report) {
+  value.split(';').map(d => d.trim()).filter(Boolean).forEach(decl => {
+    const i = decl.indexOf(':');
+    if (i === -1) {
+      report(`В \`style\` пропущено двоеточие: \`${decl}\`. Правильно: \`свойство: значение;\`.`);
+      return;
+    }
+    const prop = decl.slice(0, i).trim().toLowerCase();
+    const val = decl.slice(i + 1).trim().replace(/\s*!important$/i, '');
+    if (/\s/.test(prop)) {
+      report(`В \`style\` пропущена точка с запятой перед \`${prop.split(/\s+/).pop()}\`.`);
+      return;
+    }
+    if (!COLOR_PROPS.has(prop) || parseColor(val)) return;
+    if (/^[a-z]+$/i.test(val)) {
+      const guess = closest(val, NAMED_LIST);
+      report(guess
+        ? `Цвета \`${val}\` нет в CSS. Может быть, \`${guess}\`?`
+        : `Цвет \`${val}\` не распознан: такого названия нет в CSS.`);
+    } else if (/^#/.test(val)) {
+      report(`Запись \`${val}\` не распознана: после \`#\` нужно 3 или 6 символов 0–9 и A–F.`);
+    } else {
+      report(`Значение цвета \`${val}\` не распознано.`);
+    }
+  });
+}
+
 /* ---------- Поиск типичных ошибок набора ---------- */
 export function diagnose(code) {
   const clean = stripComments(String(code ?? ''));
@@ -160,6 +193,7 @@ export function diagnose(code) {
         const guess = closest(value, META_NAMES);
         if (guess) add(m.index, `\`${value}\` – похоже на опечатку. Может быть, \`${guess}\`?`);
       }
+      if (attr === 'style' && value) diagnoseStyle(value, msg => add(m.index, msg));
       if (name === 'meta' && attr === 'charset' && value && value.toLowerCase() !== 'utf-8') {
         add(m.index, `Кодировка записана как \`${value}\`. Правильно: \`utf-8\`, через дефис.`);
       }

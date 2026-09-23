@@ -21,10 +21,10 @@ export const modules = [
         title: 'Документ и текст',
         steps: [
           { id: 'html-01', title: 'Скелет документа', file: 'html/html-01.js' },
-          { id: 'html-02', title: 'Заголовки и абзацы' },
-          { id: 'html-03', title: 'Смысловое выделение' },
-          { id: 'html-04', title: 'Списки' },
-          { id: 'html-05', title: 'Цвет' }
+          { id: 'html-02', title: 'Заголовки и абзацы', file: 'html/html-02.js' },
+          { id: 'html-03', title: 'Смысловое выделение', file: 'html/html-03.js' },
+          { id: 'html-04', title: 'Списки', file: 'html/html-04.js' },
+          { id: 'html-05', title: 'Цвет', file: 'html/html-05.js' }
         ]
       },
       {
