@@ -1,0 +1,57 @@
+# Публикация сайта на GitHub Pages.
+# js/config.js собирается из секрета FIREBASE_CONFIG,
+# поэтому ключей нет ни в репозитории, ни в истории коммитов.
+# В опубликованный сайт не попадают analytics/, firebase/ и служебные файлы.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write js/config.js from secret
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: |
+          if [ -z "$FIREBASE_CONFIG" ]; then
+            echo "::error::Секрет FIREBASE_CONFIG не задан (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          printf '/* Собрано GitHub Actions из секрета FIREBASE_CONFIG */\nexport const firebaseConfig = %s;\n' "$FIREBASE_CONFIG" > js/config.js
+
+      - name: Assemble site
+        run: |
+          mkdir -p "$RUNNER_TEMP/site"
+          rsync -a \
+            --exclude '.git' --exclude '.github' --exclude '.gitignore' \
+            --exclude 'analytics' --exclude 'firebase' \
+            --exclude 'README.md' --exclude 'js/config.example.js' \
+            ./ "$RUNNER_TEMP/site/"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

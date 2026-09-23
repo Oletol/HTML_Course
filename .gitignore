@@ -1,0 +1,33 @@
+# Firebase: конфиг фронтенда и сервисные ключи
+js/config.js
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+.firebase/
+.firebaserc
+firebase-debug.log*
+firestore-debug.log*
+
+# Переменные окружения
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+analytics/output/
+
+# Сборка
+_site/
+
+# Системные файлы macOS и Windows, редакторы
+.DS_Store
+._*
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
