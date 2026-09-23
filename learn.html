@@ -70,6 +70,13 @@
         </div>
       </div>
 
+      <div class="splitter" id="splitter" role="separator" tabindex="0"
+           aria-orientation="horizontal" aria-controls="preview"
+           aria-label="Граница редактора и результата. Стрелки вверх и вниз меняют размер, двойной щелчок возвращает исходный"
+           title="Перетащите, чтобы изменить размер. Двойной щелчок – исходный размер">
+        <span class="splitter__grip" aria-hidden="true"></span>
+      </div>
+
       <div class="pane preview-pane">
         <div class="pane__head"><span class="pane__label">Результат</span><span>обновляется сам</span></div>
         <iframe class="preview" id="preview" title="Результат вашего кода" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
@@ -90,6 +97,7 @@
   <dialog class="dialog" id="quiz"></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script type="module" src="js/splitter.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

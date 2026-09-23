@@ -39,9 +39,9 @@ export const modules = [
       {
         title: 'Структура',
         steps: [
-          { id: 'html-10', title: 'Семантические блоки' },
-          { id: 'html-11', title: 'Таблицы' },
-          { id: 'html-12', title: 'Раскрывающиеся блоки' }
+          { id: 'html-10', title: 'Семантические блоки', file: 'html/html-10.js' },
+          { id: 'html-11', title: 'Таблицы', file: 'html/html-11.js' },
+          { id: 'html-12', title: 'Раскрывающиеся блоки', file: 'html/html-12.js' }
         ]
       },
       {
