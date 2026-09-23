@@ -55,15 +55,15 @@ export const modules = [
       {
         title: 'Локализация',
         steps: [
-          { id: 'html-16', title: 'Язык и локализация' },
-          { id: 'html-17', title: 'Доступность' },
-          { id: 'html-18', title: 'Голова документа' }
+          { id: 'html-16', title: 'Язык и локализация', file: 'html/html-16.js' },
+          { id: 'html-17', title: 'Доступность', file: 'html/html-17.js' },
+          { id: 'html-18', title: 'Голова документа', file: 'html/html-18.js' }
         ]
       },
       {
         title: 'Итоговая работа',
         steps: [
-          { id: 'html-19', title: 'Свой сайт на чистом HTML', type: 'assignment' }
+          { id: 'html-19', title: 'Свой сайт на чистом HTML', type: 'assignment', file: 'html/html-19.js' }
         ]
       }
     ]

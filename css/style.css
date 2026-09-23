@@ -373,6 +373,28 @@ body {
   background: var(--fv-preview);
 }
 
+/* ---------- Итоговая работа ---------- */
+.assignment { overflow: auto; padding: 24px clamp(20px, 3vw, 40px) 48px; background: var(--fv-paper); }
+.assignment > * { max-width: 640px; }
+.assignment__title { margin: 0 0 10px; font: 700 26px/1.1 var(--fv-font-display); text-transform: uppercase; color: var(--fv-slate); }
+.assignment__form { margin: 18px 0; padding: 18px; background: var(--fv-surface); border: 1px solid var(--fv-line); border-radius: var(--fv-radius); }
+.assignment__msg { margin: 10px 0 0; color: var(--fv-ok); font-size: 14px; }
+.assignment__report { margin: 0 0 18px; }
+.assignment__score { font-weight: 700; color: var(--fv-ink); }
+.assignment__fatal { color: var(--fv-err); }
+.assignment__detail { display: block; font-size: 13px; color: var(--fv-ink-2); }
+.assignment__checklist { margin: 0 0 16px; padding: 16px 18px; border: 1px solid var(--fv-line); border-radius: var(--fv-radius); background: var(--fv-surface); }
+.assignment__checklist legend { padding: 0 6px; font-weight: 700; color: var(--fv-ink); }
+.check { display: flex; gap: 10px; align-items: flex-start; min-height: 40px; padding: 6px 0; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin-top: 2px; flex: 0 0 20px; accent-color: var(--fv-electric); }
+.assignment__status { font-weight: 700; }
+.assignment__status[data-tone="ok"] { color: var(--fv-ok); }
+
+.theory table.rubric { width: 100%; max-width: none; border-collapse: collapse; margin: 0 0 14px; font-size: 14px; }
+.theory .rubric caption { text-align: left; margin-bottom: 6px; font-weight: 700; color: var(--fv-ink); }
+.theory .rubric th, .theory .rubric td { padding: 8px 10px; border: 1px solid var(--fv-line); vertical-align: top; text-align: left; }
+.theory .rubric thead th { background: var(--fv-paper); }
+
 /* ---------- Программа (выдвижная панель) ---------- */
 .scrim {
   position: fixed; inset: 0; z-index: 20;
@@ -485,6 +507,7 @@ a.steps__link:hover { background: var(--fv-paper); color: var(--fv-ink); }
   .work { display: block; }
   .theory { border-right: 0; border-bottom: 1px solid var(--fv-line); overflow: visible; }
   .practice { display: block; }
+  .assignment { overflow: visible; }
   .task { max-height: none; }
   .editor { height: 55vh; }
   .editor__code { height: 100%; }

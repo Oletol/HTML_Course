@@ -89,10 +89,10 @@
       row('Анонимный вход студента работает', 'ok', `UID ${cred.user.uid}`);
     } catch (err) {
       const hints = {
-        'auth/operation-not-allowed': 'Включите Anonymous: Authentication → Sign-in method.',
-        'auth/unauthorized-domain':   `Добавьте ${location.split(':')[0]} в Authentication → Settings → Authorized domains.`,
+        'auth/operation-not-allowed': 'Включите Anonymous: раздел Authentication, вкладка Sign-in method.',
+        'auth/unauthorized-domain':   `Добавьте ${location.split(':')[0]} в раздел Authentication, вкладка Settings, Authorized domains.`,
         'auth/api-key-not-valid':     'Проверьте apiKey в js/config.js.',
-        'auth/network-request-failed':'Нет связи с серверами Google — проверьте сеть.'
+        'auth/network-request-failed':'Нет связи с серверами Google, проверьте сеть.'
       };
       row('Анонимный вход не прошёл', 'err', `${err.code}. ${hints[err.code] || err.message}`);
       return;

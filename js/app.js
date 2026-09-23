@@ -25,6 +25,7 @@ import { openQuiz } from './quiz.js';
 import { createTracker } from './tracker.js';
 import { rich, paragraphs, toast, h } from './ui.js';
 import { FALLBACK_START } from '../content/html/shared.js';
+import { checkSite } from './sitecheck.js';
 
 const MAX_CODE = 20000;
 
@@ -57,7 +58,7 @@ const els = {
   userName: $('userName'),
   btnProgram: $('btnProgram'), btnProgramClose: $('btnProgramClose'),
   program: $('program'), programList: $('programList'), scrim: $('scrim'),
-  quiz: $('quiz')
+  quiz: $('quiz'), practice: $('practice'), assignment: $('assignment')
 };
 
 /* ---------- Состояние ---------- */
@@ -271,6 +272,24 @@ async function goTo(index) {
 
   els.theory.innerHTML = def.theory; /* доверенный текст из content/ */
   els.theory.scrollTop = 0;
+
+  /* Итоговая работа: вместо редактора – панель сдачи */
+  const isAssignment = def.type === 'assignment';
+  els.practice.hidden = isAssignment;
+  els.assignment.hidden = !isAssignment;
+  if (isAssignment) {
+    if (!progress[meta.id]) {
+      progress[meta.id] = await store.updateStep(meta.id, {
+        set: { status: 'in_progress', moduleId: meta.moduleId, startedAt: new Date().toISOString() }
+      });
+      store.logEvent('step_open', meta.id);
+    }
+    renderAssignment();
+    tracker.start(meta.id);
+    renderProgress();
+    return;
+  }
+
   els.taskText.replaceChildren(paragraphs(def.task));
   els.task.open = true;
 
@@ -445,6 +464,132 @@ async function runQuiz() {
 
   if (passed && next) goTo(nextIndex());
   else renderButtons();
+}
+
+/* ==================================================================
+   Итоговая работа
+   ================================================================== */
+const SITE_RE = /^https:\/\/[a-z0-9-]+\.github\.io(\/[^\s]*)?$/i;
+const REPO_RE = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/i;
+
+function renderAssignment() {
+  const { meta, def } = current;
+  const p = () => progress[meta.id] || {};
+  const box = els.assignment;
+
+  const siteInput = h('input', { class: 'field__input', id: 'siteUrl', type: 'url', inputmode: 'url', autocomplete: 'off',
+    placeholder: 'https://имя.github.io/репозиторий/', value: p().siteUrl || '' });
+  const repoInput = h('input', { class: 'field__input', id: 'repoUrl', type: 'url', inputmode: 'url', autocomplete: 'off',
+    placeholder: 'https://github.com/имя/репозиторий', value: p().repoUrl || '' });
+  const siteErr = h('p', { class: 'field__error', id: 'siteUrlError' });
+  const repoErr = h('p', { class: 'field__error', id: 'repoUrlError' });
+  const saveMsg = h('p', { class: 'assignment__msg', role: 'status', 'aria-live': 'polite' });
+  const report = h('div', { class: 'assignment__report', 'aria-live': 'polite' });
+  const btnRun = h('button', { class: 'btn', type: 'button' }, 'Проверить опубликованный сайт');
+
+  const checklist = h('fieldset', { class: 'assignment__checklist' },
+    h('legend', {}, 'Самопроверка перед сдачей'),
+    ...def.checklist.map((text, i) => {
+      const id = `chk${i}`;
+      return h('label', { class: 'check', for: id },
+        h('input', { type: 'checkbox', id, checked: Boolean(p().checklist?.[i]),
+          onchange: e => saveChecklist(i, e.target.checked) }),
+        h('span', {}, rich(text)));
+    }));
+
+  const statusLine = h('p', { class: 'assignment__status', role: 'status' });
+
+  function updateStatus() {
+    const pr = p();
+    const ticks = def.checklist.filter((_, i) => pr.checklist?.[i]).length;
+    const done = pr.status === 'completed';
+    statusLine.dataset.tone = done ? 'ok' : '';
+    statusLine.textContent = done
+      ? 'Работа отмечена как сданная в песочнице. Оценка появится в Moodle после проверки преподавателем.'
+      : `Ссылки ${pr.siteUrl && pr.repoUrl ? 'сохранены' : 'не сохранены'}, пунктов самопроверки отмечено ${ticks} из ${def.checklist.length}.`;
+  }
+
+  async function maybeComplete() {
+    const pr = p();
+    const all = def.checklist.every((_, i) => pr.checklist?.[i]);
+    if (pr.siteUrl && pr.repoUrl && all && pr.status !== 'completed') {
+      progress[meta.id] = await store.updateStep(meta.id, { set: { status: 'completed', completedAt: new Date().toISOString() } });
+      store.logEvent('assignment_submitted', meta.id, { siteUrl: pr.siteUrl, repoUrl: pr.repoUrl });
+      renderProgress();
+      toast('Готово. Не забудьте отправить ссылки в задание в Moodle.');
+    }
+    updateStatus();
+  }
+
+  async function saveChecklist(i, value) {
+    const map = { ...(p().checklist || {}) };
+    map[i] = value;
+    progress[meta.id] = await store.updateStep(meta.id, { set: { checklist: map } });
+    maybeComplete();
+  }
+
+  async function saveLinks(e) {
+    e.preventDefault();
+    const site = siteInput.value.trim();
+    const repo = repoInput.value.trim();
+    siteErr.textContent = SITE_RE.test(site) ? '' : 'Нужен адрес GitHub Pages вида https://имя.github.io/репозиторий/';
+    repoErr.textContent = REPO_RE.test(repo) ? '' : 'Нужен адрес репозитория вида https://github.com/имя/репозиторий';
+    if (siteErr.textContent || repoErr.textContent) return;
+    progress[meta.id] = await store.updateStep(meta.id, { set: { siteUrl: site, repoUrl: repo, linksSavedAt: new Date().toISOString() } });
+    saveMsg.textContent = 'Ссылки сохранены.';
+    maybeComplete();
+  }
+
+  async function runCheck() {
+    const site = siteInput.value.trim();
+    if (!SITE_RE.test(site)) { siteErr.textContent = 'Сначала укажите адрес сайта на GitHub Pages.'; siteInput.focus(); return; }
+    btnRun.disabled = true;
+    btnRun.textContent = 'Проверяю…';
+    report.replaceChildren(h('p', {}, 'Загружаю страницы сайта…'));
+    try {
+      const res = await checkSite(site);
+      if (res.fatal) { report.replaceChildren(h('p', { class: 'assignment__fatal' }, res.fatal)); return; }
+      const passed = res.items.filter(i => i.ok).length;
+      report.replaceChildren(
+        h('p', { class: 'assignment__score' }, `Выполнено ${passed} из ${res.items.length}. Проверено страниц: ${res.pages.filter(pg => !pg.error).length}.`),
+        h('ul', { class: 'reqs' }, res.items.map(it => h('li', { class: 'reqs__item', dataset: { state: it.ok ? 'ok' : 'fail' } },
+          h('span', { class: 'reqs__mark', 'aria-hidden': 'true' }, it.ok ? '✓' : '✕'),
+          h('span', { class: 'reqs__text' }, h('span', { class: 'visually-hidden' }, it.ok ? 'выполнено: ' : 'не выполнено: '),
+            rich(it.label), it.detail ? h('span', { class: 'assignment__detail' }, it.detail) : null)))));
+      progress[meta.id] = await store.updateStep(meta.id, {
+        set: { autoCheck: { passed, total: res.items.length, at: new Date().toISOString(), failed: res.items.filter(i => !i.ok).map(i => i.id) } },
+        inc: { autoCheckRuns: 1 }
+      });
+      store.logEvent('site_check', meta.id, { passed, total: res.items.length });
+    } catch (err) {
+      report.replaceChildren(h('p', { class: 'assignment__fatal' },
+        `Сайт не удалось загрузить: ${err.message}. Проверьте адрес и что публикация включена. Если сайт открывается в браузере, а проверка не проходит, проверьте требования по списку вручную.`));
+    } finally {
+      btnRun.disabled = false;
+      btnRun.textContent = 'Проверить опубликованный сайт';
+    }
+  }
+
+  btnRun.addEventListener('click', runCheck);
+
+  box.replaceChildren(
+    h('h2', { class: 'assignment__title' }, 'Сдача работы'),
+    h('p', {}, `Оценка – до ${def.points} баллов, выставляется в Moodle. Здесь сохраните ссылки, проверьте опубликованный сайт и отметьте пункты самопроверки.`),
+    h('form', { class: 'assignment__form', onsubmit: saveLinks, novalidate: true },
+      h('div', { class: 'field' }, h('label', { class: 'field__label', for: 'siteUrl' }, 'Адрес сайта на GitHub Pages'), siteInput, siteErr),
+      h('div', { class: 'field' }, h('label', { class: 'field__label', for: 'repoUrl' }, 'Адрес репозитория'), repoInput, repoErr),
+      h('div', { class: 'login__actions' }, h('button', { class: 'btn btn--primary', type: 'submit' }, 'Сохранить ссылки'), btnRun),
+      saveMsg),
+    report,
+    checklist,
+    statusLine
+  );
+  if (p().autoCheck) {
+    const a = p().autoCheck;
+    report.replaceChildren(h('p', { class: 'assignment__score' },
+      `Последняя автопроверка: выполнено ${a.passed} из ${a.total}. Запустите её снова после исправлений.`));
+  }
+  updateStatus();
 }
 
 /* ---------- Кнопки ---------- */

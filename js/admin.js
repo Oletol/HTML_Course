@@ -247,7 +247,19 @@ async function openStudent(s) {
     );
   });
 
+  /* Итоговая работа: ссылки и автопроверка */
+  const sub = prog['html-19'];
+  const safeLink = url => (/^https:\/\/\S+$/i.test(url || '') ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, url) : '–');
+  const submission = sub ? h('div', { class: 'panel', style: 'margin: 12px 0' },
+    h('h3', { style: 'margin:0 0 8px' }, 'Итоговая работа'),
+    h('p', { style: 'margin:0 0 4px' }, 'Сайт: ', safeLink(sub.siteUrl)),
+    h('p', { style: 'margin:0 0 4px' }, 'Репозиторий: ', safeLink(sub.repoUrl)),
+    h('p', { style: 'margin:0' }, sub.autoCheck
+      ? `Автопроверка: ${sub.autoCheck.passed} из ${sub.autoCheck.total}, ${when(toDate(sub.autoCheck.at))}. Самопроверка: отмечено пунктов – ${Object.values(sub.checklist || {}).filter(Boolean).length} из 8.`
+      : 'Автопроверка не запускалась.')) : null;
+
   body.lastChild.replaceWith(
+    ...(submission ? [submission] : []),
     rows.length
       ? h('div', { class: 'table-wrap' }, h('table', { class: 'tbl' },
           h('thead', {}, h('tr', {}, ...['Шаг', 'Статус', 'Время', 'Проверок / ошибок', 'Тест', 'Решение вставлено', 'Частые ошибки', 'Сданный код']
@@ -318,14 +330,16 @@ $('btnCsv').addEventListener('click', async () => {
     renderSteps();
   }
   const head = ['Студент', 'Группа', 'Шаг', 'Название шага', 'Статус', 'Время, мин', 'Проверок', 'Ошибок',
-    'Лучший результат теста, %', 'Попыток теста', 'Решение вставлено', 'Попытки вставки', 'Попытки копирования', 'Уровень подсказки'];
+    'Лучший результат теста, %', 'Попыток теста', 'Решение вставлено', 'Попытки вставки', 'Попытки копирования', 'Уровень подсказки',
+    'Сайт', 'Репозиторий', 'Автопроверка'];
   const lines = [head];
   students.forEach(s => steps.filter(st => st.ready).forEach(st => {
     const p = stepsData[s.uid]?.[st.id];
     if (!p) return;
     lines.push([s.displayName, s.group, st.n, st.title, p.status, Math.round((p.activeSec || 0) / 60),
       p.checkAttempts || 0, p.failedAttempts || 0, p.quizBestScore != null ? Math.round(p.quizBestScore * 100) : '',
-      p.quizAttempts || 0, p.solutionUsed ? 'да' : 'нет', p.pasteBlocked || 0, p.copyBlocked || 0, p.hintLevelMax || 0]);
+      p.quizAttempts || 0, p.solutionUsed ? 'да' : 'нет', p.pasteBlocked || 0, p.copyBlocked || 0, p.hintLevelMax || 0,
+      p.siteUrl || '', p.repoUrl || '', p.autoCheck ? `${p.autoCheck.passed} из ${p.autoCheck.total}` : '']);
   }));
   /* Точка с запятой и BOM – чтобы Excel с русскими настройками открыл файл без мастера импорта */
   const csv = '\ufeff' + lines.map(r => r.map(csvCell).join(';')).join('\r\n');
