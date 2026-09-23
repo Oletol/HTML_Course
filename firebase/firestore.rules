@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Правила безопасности Firestore для HTML Course.
+// Публикуются вручную: консоль Firebase, Firestore Database, вкладка Rules.
+//
+// Студент (анонимный вход) читает и пишет только свои документы.
+// Преподаватель – пользователь, чей UID есть в коллекции admins, – читает всё.
+// Коллекции admins и groups правятся только из консоли.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function groupOpen(code) {
+      return exists(/databases/$(database)/documents/groups/$(code)) &&
+        get(/databases/$(database)/documents/groups/$(code)).data.active == true;
+    }
+
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    match /groups/{code} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /students/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Регистрация: имя до 80 знаков, группа существует и открыта
+      allow create: if isOwner(uid)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.group is string
+        && groupOpen(request.resource.data.group);
+
+      // Обновление сводки: имя и группу студент сменить не может
+      allow update: if isOwner(uid)
+        && request.resource.data.group == resource.data.group
+        && request.resource.data.displayName == resource.data.displayName;
+
+      allow delete: if isAdmin();
+
+      match /progress/{stepId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if isOwner(uid)
+          && (!('finalCode' in request.resource.data) || request.resource.data.finalCode.size() <= 20000);
+        allow delete: if isAdmin();
+      }
+
+      match /eventBatches/{batchId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) && request.resource.data.events.size() <= 300;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+  }
+}

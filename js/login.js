@@ -7,6 +7,10 @@ import { store, normalizeGroup } from './store.js';
 
 const form = document.getElementById('loginForm');
 const resume = document.getElementById('resume');
+const submitBtn = form.querySelector('button[type="submit"]');
+const formError = document.getElementById('formError');
+
+await store.ready();
 const profile = store.getProfile();
 
 if (profile) {
@@ -16,7 +20,7 @@ if (profile) {
 }
 
 document.getElementById('notMe').addEventListener('click', async () => {
-  const ok = confirm('Выйти из профиля? Прогресс на этом компьютере будет удалён.');
+  const ok = confirm('Выйти из профиля? Продолжить с этим прогрессом потом не получится: при следующем входе будет создан новый профиль.');
   if (!ok) return;
   await store.signOut();
   resume.hidden = true;
@@ -57,6 +61,16 @@ form.addEventListener('submit', async e => {
     return;
   }
 
-  await store.saveProfile({ firstName: first.value, lastName: last.value, group: g });
-  location.href = 'learn.html';
+  submitBtn.disabled = true;
+  formError.textContent = '';
+  try {
+    await store.saveProfile({ firstName: first.value, lastName: last.value, group: g });
+    location.href = 'learn.html';
+  } catch (err) {
+    if (err.code === 'group') setError(group, err.message);
+    else formError.textContent = 'Не удалось войти: нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';
+    console.warn(err);
+  } finally {
+    submitBtn.disabled = false;
+  }
 });

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Панель преподавателя – HTML Course</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- Вход преподавателя -->
+  <main class="login" id="loginView" hidden>
+    <div class="login__card">
+      <p class="login__course">HTML Course</p>
+      <h1 class="login__title">Панель преподавателя</h1>
+      <form id="adminForm" novalidate>
+        <div class="field">
+          <label class="field__label" for="email">Электронная почта</label>
+          <input class="field__input" id="email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="password">Пароль</label>
+          <input class="field__input" id="password" type="password" autocomplete="current-password" required>
+        </div>
+        <p class="field__error" id="adminError" role="alert"></p>
+        <div class="login__actions">
+          <button class="btn btn--primary" type="submit">Войти</button>
+          <button class="btn btn--quiet" type="button" id="btnReset">Забыли пароль?</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Панель -->
+  <div class="adm" id="dashView" hidden>
+    <header class="adm__bar">
+      <h1 class="adm__title">Панель преподавателя</h1>
+      <label class="adm__group">
+        <span>Группа</span>
+        <select id="groupSelect" class="field__input"></select>
+      </label>
+      <span class="adm__live" id="liveState" aria-live="polite"></span>
+      <div class="adm__actions">
+        <button class="btn btn--small" type="button" id="btnCsv">Выгрузить CSV</button>
+        <button class="btn btn--quiet btn--small" type="button" id="btnLogout">Выйти</button>
+      </div>
+    </header>
+
+    <main class="adm__main">
+      <section class="kpis" aria-label="Сводка по группе">
+        <div class="kpi"><span class="kpi__value" id="kpiStudents">–</span><span class="kpi__label">студентов</span></div>
+        <div class="kpi"><span class="kpi__value" id="kpiActive">–</span><span class="kpi__label">активны сейчас</span></div>
+        <div class="kpi"><span class="kpi__value" id="kpiAvg">–</span><span class="kpi__label">шагов в среднем</span></div>
+        <div class="kpi"><span class="kpi__value" id="kpiSolution">–</span><span class="kpi__label">вставок решения</span></div>
+      </section>
+
+      <section class="panel" aria-labelledby="studentsTitle">
+        <div class="panel__head">
+          <h2 class="panel__title" id="studentsTitle">Студенты</h2>
+          <input class="field__input panel__search" id="search" type="search" placeholder="Поиск по фамилии" aria-label="Поиск по фамилии">
+        </div>
+        <div class="table-wrap">
+          <table class="tbl" id="studentsTable">
+            <thead>
+              <tr>
+                <th scope="col"><button type="button" class="sort" data-key="displayName">Студент</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="completedSteps">Пройдено</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="currentStep">Сейчас на шаге</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="totalActiveSec">Время</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="totalAttempts">Проверок</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="totalFailed">Ошибок</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="solutionUsed">Решение вставлено</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="pasteBlocked">Попытки вставки</button></th>
+                <th scope="col"><button type="button" class="sort" data-key="lastSeen">Последняя активность</button></th>
+              </tr>
+            </thead>
+            <tbody id="studentsBody"></tbody>
+          </table>
+        </div>
+        <p class="panel__note" id="studentsNote"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="stepsTitle">
+        <div class="panel__head">
+          <h2 class="panel__title" id="stepsTitle">Сводка по шагам</h2>
+          <button class="btn btn--small" type="button" id="btnSteps">Загрузить сводку</button>
+        </div>
+        <p class="panel__note">Где студенты застревают: сколько начали и прошли шаг, сколько проверок и времени требуется, какие требования не выполняются чаще всего. Сводка загружается по кнопке, чтобы не тратить лимит чтений.</p>
+        <div class="table-wrap">
+          <table class="tbl" id="stepsTable" hidden>
+            <thead>
+              <tr>
+                <th scope="col">Шаг</th>
+                <th scope="col">Начали</th>
+                <th scope="col">Прошли</th>
+                <th scope="col">Проверок в среднем</th>
+                <th scope="col">Время в среднем</th>
+                <th scope="col">Решение вставлено</th>
+                <th scope="col">Частые ошибки</th>
+              </tr>
+            </thead>
+            <tbody id="stepsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="dialog dialog--wide" id="studentDialog" aria-labelledby="studentTitle"></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

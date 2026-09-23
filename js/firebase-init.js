@@ -1,12 +1,12 @@
 /* ------------------------------------------------------------------
-   firebase-init.js — единая точка подключения Firebase.
+   firebase-init.js – единая точка подключения Firebase.
 
    Что делает: загружает конфиг, инициализирует приложение,
    Authentication и Firestore и реэкспортирует нужные функции SDK.
    Остальные модули импортируют Firebase только отсюда.
 
    Смена версии SDK: заменить 12.18.0 во всех строках import/export
-   этого файла (поиском с заменой) — больше нигде версия не указана.
+   этого файла (поиском с заменой), больше нигде версия не указана.
 
    Google Analytics не подключается намеренно: статистику курса
    собираем сами, в Firestore.
@@ -51,6 +51,6 @@ export {
 export {
   doc, getDoc, setDoc, updateDoc,
   collection, addDoc, getDocs,
-  query, where, orderBy, limit,
+  query, where, orderBy, limit, onSnapshot,
   serverTimestamp, increment, writeBatch
 } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';

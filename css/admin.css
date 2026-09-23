@@ -1,0 +1,59 @@
+/* ==================================================================
+   admin.css – панель преподавателя. Цвета – токены из tokens.css.
+   ================================================================== */
+
+.adm { min-height: 100vh; }
+.adm__bar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding: 12px 24px;
+  background: var(--fv-surface);
+  border-bottom: 1px solid var(--fv-line);
+}
+.adm__title { margin: 0; font: 700 22px/1.1 var(--fv-font-display); text-transform: uppercase; color: var(--fv-slate); }
+.adm__group { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.adm__group .field__input { min-height: 38px; }
+.adm__live { font-size: 13px; color: var(--fv-ok); }
+.adm__actions { margin-left: auto; display: flex; gap: 8px; }
+.adm__main { padding: 20px 24px 48px; display: grid; gap: 20px; max-width: 1400px; margin: 0 auto; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--fv-line); border: 1px solid var(--fv-line); border-radius: var(--fv-radius); overflow: hidden; }
+.kpi { display: grid; gap: 2px; padding: 14px 18px; background: var(--fv-surface); }
+.kpi__value { font: 700 30px/1 var(--fv-font-display); color: var(--fv-ink); font-variant-numeric: tabular-nums; }
+.kpi__label { font-size: 13px; }
+
+.panel { background: var(--fv-surface); border: 1px solid var(--fv-line); border-radius: var(--fv-radius); padding: 16px 18px; }
+.panel__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.panel__title { margin: 0; font: 700 20px/1.1 var(--fv-font-display); text-transform: uppercase; color: var(--fv-slate); }
+.panel__search { min-height: 38px; width: min(280px, 100%); }
+.panel__note { margin: 8px 0 0; font-size: 14px; }
+
+.table-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 8px 10px; border-bottom: 1px solid var(--fv-line-soft); text-align: left; vertical-align: top; }
+.tbl thead th { font-size: 12px; font-weight: 700; color: var(--fv-ink-2); white-space: nowrap; }
+.tbl tbody tr:hover { background: var(--fv-paper); }
+.tbl .num { text-align: right; }
+.tbl code { font-family: var(--fv-font-mono); font-size: .9em; background: var(--fv-electric-soft); padding: 0 .3em; border-radius: 3px; }
+
+.sort { all: unset; cursor: pointer; }
+.sort:focus-visible { outline: 2px solid var(--fv-electric); outline-offset: 2px; }
+.sort[aria-sort="ascending"]::after { content: ' ▲'; }
+.sort[aria-sort="descending"]::after { content: ' ▼'; }
+
+.student-link { all: unset; cursor: pointer; font-weight: 700; color: var(--fv-ink); }
+.student-link:hover { color: var(--fv-electric); text-decoration: underline; }
+.student-link:focus-visible { outline: 2px solid var(--fv-electric); outline-offset: 2px; }
+
+.mini-bar { display: inline-block; width: 70px; height: 6px; margin-right: 8px; border-radius: 3px; background: var(--fv-slate-soft); vertical-align: middle; overflow: hidden; }
+.mini-bar > span { display: block; height: 100%; background: var(--fv-electric); }
+
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+.badge--ok { background: var(--fv-ok-soft); color: var(--fv-ok); }
+.badge--warn { background: var(--fv-warn-soft); color: var(--fv-warn); }
+.badge--err { background: var(--fv-err-soft); color: var(--fv-err); }
+.badge--muted { background: var(--fv-slate-soft); color: var(--fv-slate); }
+.dot-live { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--fv-ok); }
+
+.dialog--wide { width: min(1100px, calc(100vw - 24px)); }
+.code-view { max-height: 360px; overflow: auto; margin: 8px 0 0; padding: 12px 14px; border-radius: var(--fv-radius-sm); background: var(--fv-paper); font: 13px/1.55 var(--fv-font-mono); color: var(--fv-ink); white-space: pre; }

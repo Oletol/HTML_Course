@@ -36,6 +36,7 @@ const SOLUTION_MODE = 'auto';
 const STATUS_RANK = { in_progress: 1, practice_done: 2, completed: 3 };
 
 /* ---------- Профиль ---------- */
+await store.ready();
 const profile = store.getProfile();
 if (!profile) {
   location.replace('index.html');
