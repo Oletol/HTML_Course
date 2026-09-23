@@ -11,6 +11,9 @@
      скрипты и отправку форм, разрешает картинки, медиа, шрифты
      и фреймы с адреса курса и по https.
    Ссылки с target="_blank" открываются в новой вкладке (allow-popups).
+   allow-forms нужен, чтобы браузер показывал встроенную проверку полей;
+   сама отправка перехватывается песочницей и никуда не уходит
+   (плюс form-action 'none' в CSP).
    Для модуля JavaScript понадобится другой режим: allow-scripts
    без allow-same-origin.
    ================================================================== */
@@ -44,8 +47,8 @@ export function buildSrcdoc(code) {
   return META + code;
 }
 
-export function createPreview(iframe, delay = 450) {
-  iframe.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+export function createPreview(iframe, delay = 450, { onFormSubmit } = {}) {
+  iframe.setAttribute('sandbox', 'allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   let timer;
   const render = code => { iframe.srcdoc = buildSrcdoc(code); };
@@ -57,6 +60,8 @@ export function createPreview(iframe, delay = 450) {
     let doc;
     try { doc = iframe.contentDocument; } catch { return; }
     if (!doc || doc.URL !== 'about:srcdoc') return;
+    /* submit срабатывает только после успешной встроенной проверки полей */
+    doc.addEventListener('submit', e => { e.preventDefault(); onFormSubmit?.(); });
     doc.addEventListener('click', e => {
       const a = e.target.closest?.('a[href]');
       if (!a) return;

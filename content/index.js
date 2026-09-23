@@ -47,9 +47,9 @@ export const modules = [
       {
         title: 'Формы',
         steps: [
-          { id: 'html-13', title: 'Основа формы' },
-          { id: 'html-14', title: 'Типы полей и списки' },
-          { id: 'html-15', title: 'Встроенная проверка' }
+          { id: 'html-13', title: 'Основа формы', file: 'html/html-13.js' },
+          { id: 'html-14', title: 'Типы полей и списки', file: 'html/html-14.js' },
+          { id: 'html-15', title: 'Встроенная проверка', file: 'html/html-15.js' }
         ]
       },
       {

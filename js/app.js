@@ -74,7 +74,9 @@ const tracker = createTracker({
   }
 });
 
-const preview = createPreview(els.preview);
+const preview = createPreview(els.preview, 450, {
+  onFormSubmit: () => toast('Форма прошла встроенную проверку браузера. В песочнице отправка отключена, данные никуда не ушли.')
+});
 
 let draftTimer;
 const editor = createEditor(els.code, els.gutter, els.marks, {
