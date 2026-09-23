@@ -68,7 +68,8 @@ form.addEventListener('submit', async e => {
     location.href = 'learn.html';
   } catch (err) {
     if (err.code === 'group') setError(group, err.message);
-    else formError.textContent = 'Не удалось войти: нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';
+    else if (err.code === 'rules') formError.textContent = `${err.message} Код ошибки: ${err.cause?.code || 'нет'}.`;
+    else formError.textContent = `Не удалось войти: нет связи с сервером. Проверьте интернет и попробуйте ещё раз. Код ошибки: ${err.code || 'нет'}.`;
     console.warn(err);
   } finally {
     submitBtn.disabled = false;

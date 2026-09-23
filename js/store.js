@@ -112,15 +112,28 @@ export const store = {
       completedSteps: 0, totalActiveSec: 0, totalAttempts: 0, totalFailed: 0,
       pasteBlocked: 0, copyBlocked: 0, solutionUsed: 0, currentStep: null
     };
+    /* Сначала группа: так ошибка кода группы не смешивается с ошибкой доступа к базе */
+    let groupDoc;
+    try {
+      groupDoc = await getDoc(doc(db, 'groups', data.group));
+    } catch (err) {
+      const e = new Error('База данных не пускает: правила Firestore не опубликованы или устарели.');
+      e.code = 'rules';
+      e.cause = err;
+      throw e;
+    }
+    if (!groupDoc.exists() || groupDoc.data().active !== true) {
+      const e = new Error('Такого кода группы нет или набор в группу закрыт.');
+      e.code = 'group';
+      throw e;
+    }
     try {
       await setDoc(doc(db, 'students', user.uid), data);
     } catch (err) {
-      if (err?.code === 'permission-denied') {
-        const e = new Error('Неверный код группы или набор в группу закрыт.');
-        e.code = 'group';
-        throw e;
-      }
-      throw err;
+      const e = new Error('База данных отклонила запись профиля. Сообщите преподавателю.');
+      e.code = 'rules';
+      e.cause = err;
+      throw e;
     }
     profile = { uid: user.uid, ...data, createdAt: nowIso(), lastSeenAt: nowIso() };
     return profile;

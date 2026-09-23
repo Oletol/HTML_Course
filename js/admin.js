@@ -65,11 +65,16 @@ const dashView = $('dashView');
 
 onAuthStateChanged(auth, async user => {
   if (!user || user.isAnonymous) { showLogin(); return; }
+  let adm;
   try {
-    const adm = await getDoc(doc(db, 'admins', user.uid));
-    if (!adm.exists()) throw new Error('not admin');
-  } catch {
-    $('adminError').textContent = 'У этой учётной записи нет доступа к панели преподавателя.';
+    adm = await getDoc(doc(db, 'admins', user.uid));
+  } catch (err) {
+    $('adminError').textContent = `База данных не пускает: правила Firestore не опубликованы или устарели. Код ошибки: ${err.code || 'нет'}.`;
+    await signOut(auth);
+    return;
+  }
+  if (!adm.exists()) {
+    $('adminError').textContent = `Учётная запись найдена, но её UID (${user.uid}) не записан в коллекции admins.`;
     await signOut(auth);
     return;
   }

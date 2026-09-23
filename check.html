@@ -40,7 +40,7 @@
 <main class="chk">
   <div class="chk__card">
     <h1 class="chk__title">Проверка подключения</h1>
-    <p class="chk__lead">Страница проверяет конфиг Firebase и вход студента. Всё должно стать зелёным.</p>
+    <p class="chk__lead">Страница проверяет конфиг Firebase, вход студента и доступ к базе. Всё должно стать зелёным.</p>
     <ul class="chk__list" id="list" aria-live="polite"></ul>
     <button class="chk__btn" id="run" type="button">Проверить ещё раз</button>
   </div>
@@ -95,6 +95,15 @@
         'auth/network-request-failed':'Нет связи с серверами Google — проверьте сеть.'
       };
       row('Анонимный вход не прошёл', 'err', `${err.code}. ${hints[err.code] || err.message}`);
+      return;
+    }
+
+    try {
+      const g = await fb.getDoc(fb.doc(fb.db, 'groups', 'ling26'));
+      row('Чтение базы: правила Firestore опубликованы', 'ok',
+          g.exists() ? `Группа ling26 найдена, набор ${g.data().active ? 'открыт' : 'закрыт'}` : 'Группа ling26 не найдена в коллекции groups');
+    } catch (err) {
+      row('База не пускает', 'err', `${err.code}. Опубликуйте правила: Firestore Database, вкладка Rules, текст из firebase/firestore.rules, кнопка Publish.`);
     }
   }
 
