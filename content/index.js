@@ -30,10 +30,10 @@ export const modules = [
       {
         title: 'Связи и медиа',
         steps: [
-          { id: 'html-06', title: 'Ссылки' },
-          { id: 'html-07', title: 'Изображения' },
-          { id: 'html-08', title: 'Аудио и видео' },
-          { id: 'html-09', title: 'Встраивание' }
+          { id: 'html-06', title: 'Ссылки', file: 'html/html-06.js' },
+          { id: 'html-07', title: 'Изображения', file: 'html/html-07.js' },
+          { id: 'html-08', title: 'Аудио и видео', file: 'html/html-08.js' },
+          { id: 'html-09', title: 'Встраивание', file: 'html/html-09.js' }
         ]
       },
       {

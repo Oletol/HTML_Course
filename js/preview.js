@@ -2,22 +2,28 @@
    preview.js – окно результата.
 
    Код студента показывается в <iframe sandbox> через srcdoc:
-   – без allow-scripts: никакой JavaScript внутри не выполнится;
-   – без allow-same-origin: у документа нет доступа к сайту, хранилищу
-     и данным Firebase;
-   – плюс политика безопасности (CSP), которая вставляется в <head>:
-     запрещает скрипты, отправку форм и подключение чего-либо, кроме
-     картинок, медиа, шрифтов и фреймов по https.
+   – без allow-scripts: никакой JavaScript внутри не выполняется;
+   – allow-same-origin нужен, чтобы из окна результата загружались
+     файлы курса (субтитры, изображения, встраиваемые страницы);
+     без скриптов этот режим безопасен: коду нечем обратиться
+     к хранилищу или данным сайта;
+   – политика безопасности (CSP) вставляется в <head>: запрещает
+     скрипты и отправку форм, разрешает картинки, медиа, шрифты
+     и фреймы с адреса курса и по https.
    Ссылки с target="_blank" открываются в новой вкладке (allow-popups).
+   Для модуля JavaScript понадобится другой режим: allow-scripts
+   без allow-same-origin.
    ================================================================== */
+
+const SELF = typeof location !== 'undefined' ? location.origin : '';
 
 const CSP = [
   "default-src 'none'",
-  "img-src https: data: blob:",
-  "media-src https: data: blob:",
+  `img-src ${SELF} https: data: blob:`,
+  `media-src ${SELF} https: data: blob:`,
   "style-src 'unsafe-inline'",
-  "font-src https: data:",
-  "frame-src https:",
+  `font-src ${SELF} https: data:`,
+  `frame-src ${SELF} https:`,
   "form-action 'none'",
   "base-uri 'none'"
 ].join('; ');
@@ -39,10 +45,33 @@ export function buildSrcdoc(code) {
 }
 
 export function createPreview(iframe, delay = 450) {
-  iframe.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox');
+  iframe.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   let timer;
   const render = code => { iframe.srcdoc = buildSrcdoc(code); };
+
+  /* Ссылки внутри окна результата обрабатывает сама песочница:
+     в srcdoc якорь «#id» иначе открыл бы в окне всю страницу курса,
+     а обычная ссылка увела бы окно результата со страницы студента. */
+  iframe.addEventListener('load', () => {
+    let doc;
+    try { doc = iframe.contentDocument; } catch { return; }
+    if (!doc || doc.URL !== 'about:srcdoc') return;
+    doc.addEventListener('click', e => {
+      const a = e.target.closest?.('a[href]');
+      if (!a) return;
+      const href = a.getAttribute('href').trim();
+      e.preventDefault();
+      if (href.startsWith('#')) {
+        const id = decodeURIComponent(href.slice(1));
+        const target = id ? doc.getElementById(id) : doc.documentElement;
+        target?.scrollIntoView({ block: 'start' });
+        return;
+      }
+      if (/^javascript:/i.test(href)) return;
+      window.open(a.href, '_blank', 'noopener,noreferrer');
+    });
+  });
   return {
     render,
     schedule(code) { clearTimeout(timer); timer = setTimeout(() => render(code), delay); }

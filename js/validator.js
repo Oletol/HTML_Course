@@ -68,7 +68,8 @@ const KNOWN_ATTRS = ('accept action alt async autocomplete autofocus charset che
   'low max maxlength media method min minlength multiple muted name novalidate open optimum pattern placeholder ' +
   'poster preload readonly referrerpolicy rel required reversed role rows rowspan sandbox scope selected size ' +
   'sizes span spellcheck src srcdoc srclang srcset start step style tabindex target title translate type ' +
-  'usemap value width wrap').split(' ');
+  'usemap value width wrap autoplay playsinline kind allow allowfullscreen fetchpriority accesskey ' +
+  'contenteditable itemprop ping').split(' ');
 
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
   'source', 'track', 'wbr']);

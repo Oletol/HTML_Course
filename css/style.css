@@ -190,6 +190,7 @@ body {
 
 .parts { list-style: none; padding: 0 !important; margin: 0 0 18px; display: grid; gap: 1px; background: var(--fv-line); border-radius: var(--fv-radius); overflow: hidden; }
 .parts li { margin: 0; padding: 14px 16px; background: var(--fv-surface); min-width: 0; }
+.theory img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: var(--fv-radius-sm); border: 1px solid var(--fv-line-soft); }
 .parts__tag { display: block; width: fit-content; max-width: 100%; margin-bottom: 6px; white-space: normal !important; overflow-wrap: anywhere; }
 
 .callout {

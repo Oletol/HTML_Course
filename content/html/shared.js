@@ -95,3 +95,26 @@ export function baseFor(c, prevStep, makeContext) {
   const ok = prevStep.checks.every(ch => { try { return ch.test(c); } catch { return false; } });
   return ok ? c : makeContext(prevStep.solution(c));
 }
+
+/* Требование «сделанное на прошлых шагах сохранено».
+   test проверяет наличие элементов, what перечисляет их для студента. */
+export function previousKept(stepNo, what, test) {
+  return {
+    id: 'previous',
+    label: `Сохранено сделанное на прошлых шагах: ${what}`,
+    test,
+    where: () => null,
+    hints: [
+      'Элементы, созданные в прошлых шагах, должны остаться на странице: новое задание их дополняет.',
+      `Проверьте, что на странице есть: ${what}.`,
+      `Если структура нарушена, нажмите «Начать заново»: редактор откроется с кодом, сданным в шаге ${stepNo}.`
+    ]
+  };
+}
+
+/* Номер строки, где встречается фрагмент текста */
+export function lineOfText(c, fragment) {
+  if (!fragment) return null;
+  const i = c.clean.indexOf(fragment);
+  return i >= 0 ? c.clean.slice(0, i).split('\n').length : null;
+}
