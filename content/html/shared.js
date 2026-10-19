@@ -118,3 +118,31 @@ export function lineOfText(c, fragment) {
   const i = c.clean.indexOf(fragment);
   return i >= 0 ? c.clean.slice(0, i).split('\n').length : null;
 }
+
+/* ---------- Чистка head ----------
+   Невидимые символы (неразрывный пробел с Option/Alt+Пробел, пробел
+   нулевой ширины) и любой текст или элемент, которому не место в head,
+   заставляют браузер закрыть head раньше: всё, что ниже, попадает в body,
+   и проверки вида «head > meta» не находят метатеги, хотя на экране
+   код выглядит правильным. cleanHead убирает такое содержимое из head,
+   чтобы решение шага гарантированно проходило проверку. */
+export const INVISIBLE = /[\u00A0\u1680\u2000-\u200D\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF]/g;
+const HEAD_OK = /^(?:<(meta|link|base)\b[^>]*>|<(title|style|script|noscript|template)\b[^>]*>[\s\S]*?<\/\2\s*>|<!--[\s\S]*?-->|[ \t\r\n]+)/i;
+
+export function cleanHead(raw) {
+  const open = raw.match(/<head\b[^>]*>/i);
+  const close = raw.match(/<\/head\s*>/i);
+  if (!open || !close || close.index < open.index) return raw;
+  const from = open.index + open[0].length;
+  let inner = raw.slice(from, close.index).replace(INVISIBLE, ' ');
+  let kept = '';
+  while (inner.length) {
+    const m = inner.match(HEAD_OK);
+    if (m) { kept += m[0]; inner = inner.slice(m[0].length); continue; }
+    /* лишний фрагмент: до следующего тега или конца строки */
+    const next = inner.slice(1).search(/<|\n/);
+    inner = next === -1 ? '' : inner.slice(next + 1);
+  }
+  kept = kept.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+  return raw.slice(0, from) + kept + raw.slice(close.index);
+}

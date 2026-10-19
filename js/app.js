@@ -576,6 +576,19 @@ async function insertSolution(ownCode) {
   });
   const ownText = multi ? `${ownCode.html}\n/* style.css */\n${ownCode.css}` : ownCode;
   store.logEvent('solution_inserted', meta.id, { ownCode: ownText.slice(0, 5000), changedLines: changes.map(c => `${c.file}:${c.line}`) });
+
+  /* Контроль: вставленное решение обязано проходить проверки шага.
+     Если нет – это ошибка в solution шага; событие видно в статистике. */
+  try {
+    const res = multi
+      ? await analyzeCss({ html: solution.html, css: solution.css, checks: current.def.checks, settings: previewSettings() })
+      : analyze(solution, current.def.checks);
+    const bad = res.results.filter(r => !r.ok).map(r => r.id);
+    if (bad.length) {
+      console.warn(`Решение шага ${meta.id} не проходит проверки:`, bad);
+      store.logEvent('solution_failed', meta.id, { failed: bad, code: (multi ? solution.html : solution).slice(0, 5000) });
+    }
+  } catch { /* контроль не должен мешать студенту */ }
 }
 
 function restoreOwnCode() {

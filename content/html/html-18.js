@@ -5,7 +5,7 @@
 
 import prevStep from './html-17.js';
 import { makeContext } from '../../js/validator.js';
-import { baseFor, skeleton, previousKept } from './shared.js';
+import { baseFor, skeleton, previousKept, cleanHead } from './shared.js';
 import { parseColor } from '../../js/colors.js';
 
 const meta = (c, attr, value) => c.qa(`head > meta[${attr}]`).filter(m => m.getAttribute(attr).trim().toLowerCase() === value);
@@ -148,17 +148,25 @@ export default {
   ],
 
   solution: c0 => {
-    const c = baseFor(c0, prevStep, makeContext);
+    /* сначала убрать из head невидимые символы и лишнее содержимое,
+       иначе вставленные метатеги окажутся в body */
+    const c = makeContext(cleanHead(baseFor(c0, prevStep, makeContext).raw));
     let code = c.raw;
     const drop = re => { code = code.replace(re, ''); };
     const desc = content(c, 'name', 'description');
     const descOk = desc.length >= 50 && desc.length <= 160 && meta(c, 'name', 'description').length === 1;
     const themeOk = Boolean(parseColor(content(c, 'name', 'theme-color')));
-    const icon = iconOk(c);
+    /* больше двух значков – требование «без повторов» не выполнено: значки собираются заново */
+    const icon = iconOk(c) && c.qa('head > link[rel~="icon" i]').length <= 2;
     if (!descOk) drop(/\n?[ \t]*<meta[^>]*name\s*=\s*["']?description["']?[^>]*>/gi);
     if (!themeOk) drop(/\n?[ \t]*<meta[^>]*name\s*=\s*["']?theme-color["']?[^>]*>/gi);
     if (!icon) drop(/\n?[ \t]*<link[^>]*rel\s*=\s*["']?[^"'>]*icon[^>]*>/gi);
     drop(/\n?[ \t]*<meta[^>]*property\s*=\s*["']?og:[^>]*>/gi);
+    /* повторы charset, viewport и title: оставить первое вхождение */
+    const keepFirst = re => { let n = 0; code = code.replace(re, m => (n++ ? '' : m)); };
+    keepFirst(/\n?[ \t]*<meta[^>]*charset[^>]*>/gi);
+    keepFirst(/\n?[ \t]*<meta[^>]*name\s*=\s*["']?viewport["']?[^>]*>/gi);
+    keepFirst(/\n?[ \t]*<title\b[^>]*>[\s\S]*?<\/title\s*>/gi);
     const title = (c.text('head > title') || 'Мой проект').replace(/"/g, '&quot;');
     const lines = [];
     if (!descOk) lines.push('<meta name="description" content="Учебный сайт о моём проекте: задачи, материалы, расписание и форма записи на занятия.">');

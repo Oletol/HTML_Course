@@ -201,6 +201,44 @@ export function diagnose(code) {
     }
   }
 
+  /* Невидимые символы в тегах, в отступах и в head (неразрывный пробел
+     набирается сочетанием Option/Alt+Пробел). На экране их не видно,
+     но браузер считает их текстом: в head такой символ закрывает head,
+     в теге ломает имя тега или атрибута. */
+  const headOpen = clean.search(/<head\b/i);
+  const headClose = clean.search(/<\/head\s*>/i);
+  const INVIS = /[\u00A0\u1680\u2000-\u200D\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF]/g;
+  while ((m = INVIS.exec(clean))) {
+    const i = m.index;
+    const lineStart = clean.lastIndexOf('\n', i) + 1;
+    const inIndent = /^[\s]*$/.test(clean.slice(lineStart, i));
+    const inTag = clean.lastIndexOf('<', i) > clean.lastIndexOf('>', i - 1);
+    const inHead = headOpen !== -1 && i > headOpen && (headClose === -1 || i < headClose);
+    if (inIndent || inTag || inHead) {
+      add(i, 'В строке есть невидимый символ (неразрывный пробел). Удалите пробелы в этой строке и наберите их заново обычной клавишей «Пробел».');
+    }
+  }
+
+  /* Текст или элемент, которому не место в head: браузер закрывает head
+     на этом месте, и всё, что ниже, попадает в body */
+  if (headOpen !== -1 && headClose > headOpen) {
+    const start = clean.indexOf('>', headOpen) + 1;
+    const inner = clean.slice(start, headClose);
+    const okRe = /^(?:<(meta|link|base)\b[^>]*>|<(title|style|script|noscript|template)\b[^>]*>[\s\S]*?<\/\2\s*>|[ \t\r\n]+)/i;
+    let pos = 0;
+    while (pos < inner.length) {
+      const r = inner.slice(pos).match(okRe);
+      if (r) { pos += r[0].length; continue; }
+      const rest = inner.slice(pos);
+      if (/^[\u00A0\u1680\u2000-\u200D\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF]/.test(rest)) break; /* уже названо выше */
+      const tag = rest.match(/^<\/?([a-zA-Z][\w-]*)/);
+      add(start + pos, tag
+        ? `Элемент \`<${tag[1]}>\` не может стоять в \`head\`: браузер закрывает \`head\` на этой строке, и всё, что ниже, попадает в \`body\`.`
+        : `В \`head\` стоит текст \`${rest.trim().split(/[<\n]/)[0].slice(0, 30)}\`: браузер закрывает \`head\` на этой строке, и всё, что ниже, попадает в \`body\`.`);
+      break;
+    }
+  }
+
   /* Одна запись на строку и сообщение, по порядку строк */
   const seen = new Set();
   return out
