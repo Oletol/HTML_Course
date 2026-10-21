@@ -84,7 +84,7 @@ export const modules = [
           { id: 'css-01', title: 'Подключение и синтаксис', file: 'css/css-01.js' },
           { id: 'css-02', title: 'Селекторы и классы', file: 'css/css-02.js' },
           { id: 'css-03', title: 'Каскад, наследование, специфичность', file: 'css/css-03.js' },
-          { id: 'css-04', title: 'Современные селекторы' },
+          { id: 'css-04', title: 'Современные селекторы', file: 'css/css-04.js' },
           { id: 'css-05', title: 'Сброс стилей и методология БЭМ' }
         ]
       },
