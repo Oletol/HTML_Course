@@ -84,6 +84,47 @@ export function pick(m, sel) {
   try { return m.qa(sel); } catch { return []; }
 }
 
+/* Лежит ли правило в каскадном слое с этим именем (в том числе внутри @media слоя) */
+export const inLayer = (rule, name) =>
+  (rule.context || []).some(p => new RegExp(`^@layer\\s+${name}\\s*$`, 'i').test(p.trim()));
+
+/* Правило вне всех каскадных слоёв */
+export const unlayered = rule => !(rule.context || []).some(p => /^@layer\b/i.test(p.trim()));
+
+/* Цвет, который браузер вычислит для значения value, в виде строки rgb(…) */
+export function computedColor(m, value) {
+  const probe = m.doc.createElement('span');
+  probe.style.color = '';
+  probe.style.color = value;
+  if (!probe.style.color) return null;
+  m.doc.body.append(probe);
+  const out = m.cs(probe).color;
+  probe.remove();
+  return out;
+}
+
+/* Добавить класс абзацу, который в документе стоит под номером index
+   среди всех открывающих тегов <p> (комментарии пропускаются) */
+export function addClassToParagraph(html, index, cls) {
+  const re = /<!--[\s\S]*?-->|<p\b([^>]*)>/gi;
+  let n = -1, m;
+  while ((m = re.exec(html))) {
+    if (m[0].startsWith('<!--')) continue;
+    if (++n !== index) continue;
+    const attrs = m[1];
+    const has = attrs.match(/\sclass\s*=\s*(["'])(.*?)\1/i);
+    let tag;
+    if (has) {
+      if (new RegExp(`(^|\\s)${cls}(\\s|$)`).test(has[2])) return html;
+      tag = `<p${attrs.replace(has[0], ` class="${`${has[2].trim()} ${cls}`.trim()}"`)}>`;
+    } else {
+      tag = `<p class="${cls}"${attrs}>`;
+    }
+    return html.slice(0, m.index) + tag + html.slice(m.index + m[0].length);
+  }
+  return html;
+}
+
 /* Вставить строку перед </head> */
 export function addToHead(html, line) {
   return html.replace(/\n?([ \t]*)<\/head\s*>/i, (m, pad) => `\n${pad}  ${line}\n${pad}</head>`);
