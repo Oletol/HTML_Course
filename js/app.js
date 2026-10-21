@@ -46,6 +46,16 @@ if (!profile) {
   throw new Error('Нет профиля студента');
 }
 
+/* Профиль без email открывается только в этом браузере: напомнить привязать вход */
+if (store.isAnonymous()) {
+  const link = document.getElementById('btnProfile');
+  if (link) {
+    link.textContent = 'Вход с других устройств';
+    link.classList.replace('btn--quiet', 'btn--attention');
+    link.title = 'Задайте email и пароль, чтобы продолжать с телефона или другого компьютера';
+  }
+}
+
 /* ---------- Элементы ---------- */
 const $ = id => document.getElementById(id);
 const els = {

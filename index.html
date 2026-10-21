@@ -15,12 +15,44 @@
       <h1 class="login__title">Песочница вёрстки</h1>
       <p class="login__lead">Короткие шаги: теория, код руками, проверка и тест. Следующий шаг откроется, когда пройден предыдущий.</p>
 
+      <!-- Профиль уже открыт в этом браузере -->
       <div class="login__resume" id="resume" hidden>
         <p>Вы вошли как <strong id="resumeName"></strong>.</p>
+        <p class="login__account" id="resumeAccount" hidden></p>
         <div class="login__actions">
           <a class="btn btn--primary" href="learn.html">Продолжить</a>
           <button class="btn btn--quiet" type="button" id="notMe">Это не я</button>
         </div>
+      </div>
+
+      <!-- Старый анонимный профиль: предложить привязать email -->
+      <section class="login__link" id="linkBox" hidden aria-labelledby="linkTitle">
+        <h2 class="login__subtitle" id="linkTitle">Вход с других устройств</h2>
+        <p>Сейчас ваш прогресс сохраняется только в этом браузере. Задайте email и пароль, и с ними вы войдёте в этот же профиль с телефона, домашнего или учебного компьютера.</p>
+        <p class="field__hint">Если у вас уже несколько профилей на разных устройствах, сделайте это там, где пройдено больше шагов.</p>
+        <form id="linkForm" novalidate>
+          <div class="field">
+            <label class="field__label" for="linkEmail">Email</label>
+            <input class="field__input" id="linkEmail" name="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" required maxlength="100">
+            <p class="field__error" id="linkEmailError"></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="linkPassword">Пароль</label>
+            <span class="field__hint" id="linkPasswordHint">Не короче 6 знаков</span>
+            <input class="field__input" id="linkPassword" name="password" type="password" autocomplete="new-password" required minlength="6" maxlength="100" aria-describedby="linkPasswordHint">
+            <p class="field__error" id="linkPasswordError"></p>
+          </div>
+          <p class="field__error" id="linkFormError" role="alert"></p>
+          <div class="login__actions">
+            <button class="btn btn--primary" type="submit">Сохранить вход</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Профиля нет: регистрация или вход -->
+      <div class="segmented" id="modeSwitch" role="group" aria-label="Способ входа">
+        <button class="segmented__btn" type="button" data-mode="register" aria-pressed="true">Я здесь впервые</button>
+        <button class="segmented__btn" type="button" data-mode="signin" aria-pressed="false">У меня есть профиль</button>
       </div>
 
       <form id="loginForm" novalidate>
@@ -40,11 +72,42 @@
           <input class="field__input" id="group" name="group" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="20" aria-describedby="groupHint">
           <p class="field__error" id="groupError"></p>
         </div>
+        <div class="field">
+          <label class="field__label" for="regEmail">Email</label>
+          <input class="field__input" id="regEmail" name="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" required maxlength="100">
+          <p class="field__error" id="regEmailError"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="regPassword">Пароль</label>
+          <span class="field__hint" id="regPasswordHint">Не короче 6 знаков. С email и паролем вы продолжите с любого устройства</span>
+          <input class="field__input" id="regPassword" name="password" type="password" autocomplete="new-password" required minlength="6" maxlength="100" aria-describedby="regPasswordHint">
+          <p class="field__error" id="regPasswordError"></p>
+        </div>
         <p class="field__error" id="formError" role="alert"></p>
         <div class="login__actions">
           <button class="btn btn--primary" type="submit">Начать</button>
         </div>
         <p class="login__note">Фамилия и имя нужны преподавателю, чтобы видеть ваш прогресс. Пишите так, как в списке группы.</p>
+      </form>
+
+      <form id="signinForm" novalidate hidden>
+        <div class="field">
+          <label class="field__label" for="inEmail">Email</label>
+          <input class="field__input" id="inEmail" name="email" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" required maxlength="100">
+          <p class="field__error" id="inEmailError"></p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="inPassword">Пароль</label>
+          <input class="field__input" id="inPassword" name="password" type="password" autocomplete="current-password" required maxlength="100">
+          <p class="field__error" id="inPasswordError"></p>
+        </div>
+        <p class="field__error" id="signinError" role="alert"></p>
+        <p class="login__ok" id="signinInfo" role="status"></p>
+        <div class="login__actions">
+          <button class="btn btn--primary" type="submit">Войти</button>
+          <button class="btn btn--quiet" type="button" id="btnReset">Забыли пароль?</button>
+        </div>
+        <p class="login__note">Если вы проходили шаги, не задав email и пароль, откройте песочницу на том устройстве, где учились, и привяжите email на этой странице.</p>
       </form>
     </div>
   </main>

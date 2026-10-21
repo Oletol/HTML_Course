@@ -42,6 +42,8 @@ export const projectId = firebaseConfig.projectId;
 export {
   signInAnonymously,
   signInWithEmailAndPassword,
+  linkWithCredential,
+  EmailAuthProvider,
   sendPasswordResetEmail,
   onAuthStateChanged,
   signOut
@@ -49,7 +51,7 @@ export {
 
 /* Firestore */
 export {
-  doc, getDoc, setDoc, updateDoc,
+  doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, addDoc, getDocs,
   query, where, orderBy, limit, onSnapshot,
   serverTimestamp, increment, writeBatch

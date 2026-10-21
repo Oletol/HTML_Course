@@ -103,6 +103,38 @@ body {
 .login__resume { margin: 0 0 20px; padding: 16px; border-radius: var(--fv-radius); background: var(--fv-paper); }
 .login__resume p { margin: 0 0 12px; color: var(--fv-ink); }
 .login__note { margin: 20px 0 0; font-size: 13px; }
+.login__account { font-size: 14px; }
+.login__ok { color: var(--fv-ok); font-size: 14px; margin: 0; }
+.login__ok:empty { display: none; }
+
+/* Привязка email к анонимному профилю */
+.login__link {
+  margin: 0 0 20px; padding: 16px;
+  border-radius: var(--fv-radius);
+  background: var(--fv-warn-soft);
+}
+.login__link > p { margin: 0 0 12px; color: var(--fv-ink); }
+.login__link .field__hint { display: block; color: var(--fv-ink-2); }
+.login__subtitle { margin: 0 0 8px; font-size: 18px; color: var(--fv-ink); }
+
+/* Переключатель «впервые / есть профиль» */
+.segmented {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  margin: 0 0 20px; padding: 4px;
+  border-radius: var(--fv-radius-sm);
+  background: var(--fv-paper);
+}
+.segmented[hidden] { display: none; }
+.segmented__btn {
+  min-height: 40px; padding: 0 10px;
+  border: 0; border-radius: var(--fv-radius-sm);
+  background: transparent; color: var(--fv-ink-2);
+  font: 600 14px var(--fv-font-text); cursor: pointer;
+}
+.segmented__btn[aria-pressed="true"] { background: var(--fv-surface); color: var(--fv-ink); box-shadow: var(--fv-shadow); }
+
+/* Кнопка «Профиль» в шапке, если email ещё не привязан */
+.btn--attention { border-color: var(--fv-warn); color: var(--fv-warn); background: var(--fv-warn-soft); }
 
 /* ==================================================================
    Рабочий экран

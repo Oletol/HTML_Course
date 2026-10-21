@@ -6,12 +6,19 @@
    Таблица студентов обновляется сама (onSnapshot), подробности
    по студенту и сводка по шагам загружаются по кнопке.
    Все тексты из базы выводятся через textContent – без innerHTML.
+
+   Удаление студента (карточка студента, кнопка «Удалить студента»):
+   стираются вложенные коллекции progress и eventBatches, затем сам
+   документ students/{uid}. Firestore не удаляет вложенные коллекции
+   вместе с документом, поэтому они чистятся отдельно, пакетами.
+   Учётная запись входа (Authentication) из браузера не удаляется –
+   это делается в консоли Firebase, панель об этом напоминает.
    ================================================================== */
 
 import {
   auth, db,
   signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut,
-  doc, getDoc, collection, getDocs, query, where, onSnapshot
+  doc, getDoc, collection, getDocs, query, where, onSnapshot, writeBatch
 } from './firebase-init.js';
 import { flatSteps } from '../content/index.js';
 import { rich, toast, h } from './ui.js';
@@ -223,7 +230,37 @@ async function openStudent(s) {
     h('h2', { class: 'dialog__title', id: 'studentTitle' }, s.displayName || 'Без имени'),
     h('p', {}, `Пройдено ${s.completedSteps || 0} из ${TOTAL}. Время ${duration(s.totalActiveSec)}. Последняя активность: ${when(toDate(s.lastSeenAt))}.`),
     h('p', {}, 'Загрузка…'));
-  const foot = h('div', { class: 'dialog__foot' }, h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'Закрыть'));
+  const foot = h('div', { class: 'dialog__foot' });
+  /* Обычный подвал: «Закрыть» и «Удалить студента» */
+  const footDefault = () => foot.replaceChildren(
+    h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'Закрыть'),
+    h('button', { class: 'btn btn--danger-quiet dialog__foot-end', type: 'button', onclick: footConfirm }, 'Удалить студента'));
+  /* Подтверждение прямо в подвале, без системного окна */
+  function footConfirm() {
+    const yes = h('button', { class: 'btn btn--danger', type: 'button' }, 'Да, удалить');
+    const no = h('button', { class: 'btn', type: 'button', onclick: footDefault }, 'Отмена');
+    const msg = h('p', { class: 'dialog__warn', role: 'alert' },
+      `Удалить профиль «${s.displayName || 'Без имени'}» вместе с прогрессом и статистикой? Отменить это будет нельзя.`);
+    yes.addEventListener('click', async () => {
+      yes.disabled = no.disabled = true;
+      yes.textContent = 'Удаление…';
+      try {
+        await deleteStudent(s.uid);
+        dlg.close();
+        toast(s.email
+          ? `Студент удалён. Чтобы освободить email ${s.email}, удалите его также в консоли Firebase: Authentication, вкладка Users.`
+          : 'Студент удалён.', s.email ? 9000 : 3200);
+      } catch (err) {
+        console.warn(err);
+        msg.textContent = `Не удалось удалить: ${err.code || err.message}. Проверьте, опубликованы ли правила Firestore.`;
+        yes.disabled = no.disabled = false;
+        yes.textContent = 'Да, удалить';
+      }
+    });
+    foot.replaceChildren(msg, yes, no);
+    no.focus();
+  }
+  footDefault();
   dlg.replaceChildren(body, foot);
   dlg.showModal();
 
@@ -268,6 +305,24 @@ async function openStudent(s) {
       : h('p', {}, 'Студент ещё не начал ни одного шага.'),
     h('div', { id: 'codeSlot' })
   );
+}
+
+/* Удалить студента: сначала вложенные коллекции, затем документ.
+   В одном пакете Firestore – не больше 500 операций. */
+async function deleteStudent(uid) {
+  for (const sub of ['progress', 'eventBatches']) {
+    const snap = await getDocs(collection(db, 'students', uid, sub));
+    for (let i = 0; i < snap.docs.length; i += 450) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + 450).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'students', uid));
+  await batch.commit();
+  if (stepsData) delete stepsData[uid];
+  /* Таблица обновится сама: onSnapshot получит удаление */
 }
 
 function showCode(body, st, p) {

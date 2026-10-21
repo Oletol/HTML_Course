@@ -9,6 +9,7 @@
    ================================================================== */
 
 import { BASE_PAGE } from './base-page.js';
+import { diagnoseCss } from '../../js/cssvalidator.js';
 export { BASE_PAGE };
 
 /* Правила, у которых хотя бы один селектор проходит проверку */
@@ -48,6 +49,40 @@ export const linked = {
     'Образец: `<link rel="stylesheet" href="style.css">` перед строкой `</head>`.'
   ]
 };
+
+/* Требование «таблица стилей без синтаксических ошибок» – общее для шагов,
+   начиная со второго (в шаге 1 оно записано внутри шага) */
+export const syntax = {
+  id: 'syntax',
+  label: 'В таблице стилей нет синтаксических ошибок',
+  test: c => c.css.text.trim().length > 0 && diagnoseCss(c.css.text).length === 0,
+  where: c => { const e = diagnoseCss(c.css.text)[0]; return e ? { file: 'css', line: e.line } : null; },
+  hints: [
+    'Песочница нашла ошибку в записи правил: она отмечена в списке «Что исправить».',
+    'Проверьте по порядку: селектор, открывающая скобка, объявления вида `свойство: значение;`, закрывающая скобка.',
+    'Образец правила: `p {` на первой строке, `line-height: 1.5;` на второй, `}` на третьей.'
+  ]
+};
+
+/* Селектор без содержимого скобок и кавычек – для разбора его устройства */
+export function selectorSkeleton(sel) {
+  return String(sel)
+    .replace(/"[^"]*"|'[^']*'/g, '""')
+    .replace(/\[[^\]]*\]/g, '[]')
+    .replace(/\([^()]*\)/g, '()');
+}
+
+/* Есть ли в селекторе обращение по id */
+export const hasIdSelector = sel => /#[-_a-zA-Z\u00A0-\uFFFF\\]/.test(
+  String(sel).replace(/"[^"]*"|'[^']*'/g, '""').replace(/\[[^\]]*\]/g, '[]'));
+
+/* Есть ли в селекторе комбинатор: пробел, >, + или ~ */
+export const hasCombinator = sel => /[\s>+~]/.test(selectorSkeleton(sel).trim());
+
+/* Элементы отрисованной страницы, которые выбирает селектор; ошибка в селекторе – пустой список */
+export function pick(m, sel) {
+  try { return m.qa(sel); } catch { return []; }
+}
 
 /* Вставить строку перед </head> */
 export function addToHead(html, line) {

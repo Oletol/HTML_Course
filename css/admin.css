@@ -57,3 +57,11 @@
 
 .dialog--wide { width: min(1100px, calc(100vw - 24px)); }
 .code-view { max-height: 360px; overflow: auto; margin: 8px 0 0; padding: 12px 14px; border-radius: var(--fv-radius-sm); background: var(--fv-paper); font: 13px/1.55 var(--fv-font-mono); color: var(--fv-ink); white-space: pre; }
+
+/* ---------- Удаление студента ---------- */
+.dialog__foot-end { margin-inline-start: auto; }
+.btn--danger { border-color: var(--fv-err); background: var(--fv-err); color: var(--fv-surface); }
+.btn--danger:hover { filter: brightness(1.08); border-color: var(--fv-err); }
+.btn--danger-quiet { border-color: transparent; background: transparent; color: var(--fv-err); }
+.btn--danger-quiet:hover { border-color: var(--fv-err); background: var(--fv-err-soft); }
+.dialog__warn { flex: 1 1 100%; margin: 0; padding: 10px 12px; border-radius: var(--fv-radius-sm); background: var(--fv-err-soft); color: var(--fv-ink); font-size: 15px; }

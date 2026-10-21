@@ -2,9 +2,14 @@
    store.js – профиль, прогресс и события студента в Firestore.
 
    Интерфейс тот же, что у локальной версии, плюс ready():
-     await ready()                      – дождаться входа (анонимного)
+     await ready()                      – дождаться восстановления входа
      getProfile()                       – профиль или null
-     saveProfile({firstName, lastName, group})
+     isAnonymous()                      – вход без email (только это устройство)
+     accountEmail()                     – email входа или null
+     saveProfile({firstName, lastName, group, email, password})
+     signIn(email, password)            – вход в существующий профиль
+     linkAccount(email, password)       – привязать email к анонимному профилю
+     resetPassword(email)               – письмо для смены пароля
      signOut()
      loadProgress()                     – { [stepId]: {...} }
      updateStep(stepId, patch)          – patch = { set, inc, max, incMap }
@@ -18,6 +23,13 @@
    Пакет: изменённые документы прогресса + сводка студента +
    один документ с накопленными событиями.
 
+   Вход. Студент сначала входит анонимно (так можно прочитать код
+   группы), затем к этой же учётной записи привязываются email
+   и пароль (linkWithCredential). UID при привязке не меняется,
+   поэтому прогресс остаётся на месте, а правила Firestore менять
+   не нужно. На другом устройстве студент входит по email и паролю
+   и попадает в тот же профиль.
+
    Схема:
      students/{uid}                      сводка для панели преподавателя
      students/{uid}/progress/{stepId}    прогресс по шагу
@@ -26,7 +38,8 @@
 
 import {
   auth, db,
-  signInAnonymously, onAuthStateChanged, signOut as fbSignOut,
+  signInAnonymously, signInWithEmailAndPassword, sendPasswordResetEmail,
+  linkWithCredential, EmailAuthProvider, onAuthStateChanged, signOut as fbSignOut,
   doc, getDoc, setDoc, collection, getDocs, writeBatch, serverTimestamp
 } from './firebase-init.js';
 
@@ -43,6 +56,9 @@ let lastStep = null;
 let timer = null;
 let flushing = null;
 
+/* Письма Firebase (смена пароля) – на русском */
+auth.languageCode = 'ru';
+
 const nowIso = () => new Date().toISOString();
 const clone = o => JSON.parse(JSON.stringify(o ?? null));
 
@@ -50,20 +66,45 @@ export function normalizeGroup(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
 }
 
+/* Понятные сообщения для ошибок Firebase Authentication */
+function authError(err) {
+  const map = {
+    'auth/invalid-credential': 'Неверный email или пароль.',
+    'auth/wrong-password': 'Неверный email или пароль.',
+    'auth/user-not-found': 'Неверный email или пароль.',
+    'auth/invalid-email': 'Email записан с ошибкой.',
+    'auth/missing-password': 'Введите пароль.',
+    'auth/weak-password': 'Пароль слишком простой: нужно не меньше 6 знаков.',
+    'auth/email-already-in-use': 'Этот email уже занят другим профилем. Если это ваш профиль, войдите по нему.',
+    'auth/credential-already-in-use': 'Этот email уже занят другим профилем. Если это ваш профиль, войдите по нему.',
+    'auth/provider-already-linked': 'К этому профилю email уже привязан.',
+    'auth/too-many-requests': 'Слишком много попыток. Подождите несколько минут и попробуйте снова.',
+    'auth/network-request-failed': 'Нет связи с сервером. Проверьте интернет.',
+    'auth/operation-not-allowed': 'Вход по email выключен в настройках Firebase. Сообщите преподавателю.'
+  };
+  const e = new Error(map[err?.code] || 'Не удалось войти. Попробуйте ещё раз.');
+  e.code = 'auth';
+  e.authCode = err?.code;
+  e.cause = err;
+  return e;
+}
+
+async function readProfile(u) {
+  try {
+    const snap = await getDoc(doc(db, 'students', u.uid));
+    return snap.exists() ? { uid: u.uid, ...snap.data() } : null;
+  } catch (err) {
+    console.warn('Профиль не загружен', err);
+    return null;
+  }
+}
+
 /* ---------- Вход ---------- */
 const readyPromise = new Promise(resolve => {
   const stop = onAuthStateChanged(auth, async u => {
     stop();
     user = u;
-    if (u) {
-      try {
-        const snap = await getDoc(doc(db, 'students', u.uid));
-        profile = snap.exists() ? { uid: u.uid, ...snap.data() } : null;
-      } catch (err) {
-        console.warn('Профиль не загружен', err);
-        profile = null;
-      }
-    }
+    if (u) profile = await readProfile(u);
     resolve();
   });
 });
@@ -98,7 +139,18 @@ export const store = {
 
   getProfile() { return profile; },
 
-  async saveProfile({ firstName, lastName, group }) {
+  isAnonymous() { return !!user?.isAnonymous; },
+
+  accountEmail() { return user?.email || null; },
+
+  /* Регистрация: анонимный вход, проверка группы, привязка email, профиль */
+  async saveProfile({ firstName, lastName, group, email, password }) {
+    email = String(email || '').trim().toLowerCase();
+    /* Вошли по другому email (чужая сессия на общем компьютере) – начать заново */
+    if (user && !user.isAnonymous && user.email !== email) {
+      await fbSignOut(auth);
+      user = null;
+    }
     if (!user) user = (await signInAnonymously(auth)).user;
     const displayName = `${lastName.trim()} ${firstName.trim()}`;
     const data = {
@@ -107,6 +159,7 @@ export const store = {
       displayName,
       nameKey: displayName.toLowerCase().replace(/ё/g, 'е'),
       group: normalizeGroup(group),
+      email,
       createdAt: serverTimestamp(),
       lastSeenAt: serverTimestamp(),
       completedSteps: 0, totalActiveSec: 0, totalAttempts: 0, totalFailed: 0,
@@ -127,6 +180,14 @@ export const store = {
       e.code = 'group';
       throw e;
     }
+    /* Привязка email и пароля к той же учётной записи (UID не меняется) */
+    if (user.isAnonymous) {
+      try {
+        user = (await linkWithCredential(user, EmailAuthProvider.credential(email, password))).user;
+      } catch (err) {
+        throw authError(err);
+      }
+    }
     try {
       await setDoc(doc(db, 'students', user.uid), data);
     } catch (err) {
@@ -137,6 +198,48 @@ export const store = {
     }
     profile = { uid: user.uid, ...data, createdAt: nowIso(), lastSeenAt: nowIso() };
     return profile;
+  },
+
+  /* Вход в существующий профиль с любого устройства */
+  async signIn(email, password) {
+    try { await store.flush(); } catch { /* ничего */ }
+    let cred;
+    try {
+      cred = await signInWithEmailAndPassword(auth, String(email).trim().toLowerCase(), password);
+    } catch (err) {
+      throw authError(err);
+    }
+    user = cred.user;
+    progress = {}; dirty = new Set(); events = [];
+    profile = await readProfile(user);
+    return profile;
+  },
+
+  /* Привязать email и пароль к уже созданному анонимному профилю */
+  async linkAccount(email, password) {
+    if (!user || !profile) throw authError({ code: 'auth/user-not-found' });
+    email = String(email).trim().toLowerCase();
+    try {
+      user = (await linkWithCredential(user, EmailAuthProvider.credential(email, password))).user;
+    } catch (err) {
+      throw authError(err);
+    }
+    /* Email – в сводку, чтобы преподаватель видел, у кого вход настроен */
+    try {
+      await setDoc(doc(db, 'students', user.uid), { email }, { merge: true });
+      profile.email = email;
+    } catch (err) {
+      console.warn('Email не записан в профиль', err);
+    }
+    return profile;
+  },
+
+  async resetPassword(email) {
+    try {
+      await sendPasswordResetEmail(auth, String(email).trim().toLowerCase());
+    } catch (err) {
+      throw authError(err);
+    }
   },
 
   async signOut() {
